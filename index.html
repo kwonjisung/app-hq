@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>앱 관리실</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f0e8; --panel:#fffdf8; --ink:#1d1c1a; --sub:#6b675f; --line:#e2ddd1; --soft:#ece7db;
+  --idea:#7a6ff0; --active:#1f9d6b; --paused:#d98a1c; --done:#2f6fdb; --trash:#c8423b;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans KR",system-ui,sans-serif;font-size:14px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+.mono{font-family:"IBM Plex Mono",monospace}
+.wrap{max-width:1380px;margin:0 auto;padding:22px 20px 80px}
+
+/* header */
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.brand h1{margin:0;font-size:30px;letter-spacing:-.03em;font-weight:700;display:flex;align-items:center;gap:10px}
+.brand h1 .dot{width:14px;height:14px;border-radius:4px;background:conic-gradient(var(--active) 0 25%,var(--paused) 0 50%,var(--idea) 0 75%,var(--done) 0)}
+.brand p{margin:4px 0 0;color:var(--sub)}
+.hright{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sync{font-size:12px;color:var(--sub);padding:6px 10px;border:1px dashed var(--line);border-radius:99px}
+.btn{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:10px;padding:8px 13px;font-weight:600;font-size:13px}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn.sm{padding:5px 9px;font-size:12px;border-radius:8px}
+.btn.danger{background:var(--trash);border-color:var(--trash)}
+.btn:disabled{opacity:.4;cursor:default}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;cursor:pointer;transition:.15s}
+.stat:hover{transform:translateY(-1px);border-color:#cfc8b8}
+.stat b{display:block;font-family:"IBM Plex Mono",monospace;font-size:26px;line-height:1.1}
+.stat span{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px}
+.stat i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.stat.warn{background:#fff4e6;border-color:#f1d2a6}
+
+/* checker */
+.checker{background:var(--ink);color:#fff;border-radius:18px;padding:16px 18px;margin-bottom:16px}
+.checker label{font-size:12px;opacity:.7;display:block;margin-bottom:6px}
+.checker .row{display:flex;gap:8px}
+.checker input{flex:1;background:#2c2b28;border:1px solid #45433e;border-radius:10px;padding:11px 13px;color:#fff;font-size:15px;outline:none}
+.checker input:focus{border-color:#8f8a7e}
+.checker .btn{background:#fff;color:var(--ink);border-color:#fff}
+.simlist{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.sim{background:#2c2b28;border:1px solid #45433e;border-radius:12px;padding:8px 11px;cursor:pointer;display:flex;gap:10px;align-items:center}
+.sim:hover{border-color:#bbb}
+.sim .pct{font-family:"IBM Plex Mono",monospace;font-size:12px;padding:2px 6px;border-radius:6px;background:#45433e}
+.sim .pct.hi{background:var(--trash)}
+.simnote{font-size:13px;opacity:.8;margin-top:10px}
+
+/* tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px;overflow-x:auto}
+.tab{background:none;border:none;padding:10px 14px;font-weight:600;color:var(--sub);border-bottom:2px solid transparent;white-space:nowrap}
+.tab.on{color:var(--ink);border-color:var(--ink)}
+.tab .n{font-family:"IBM Plex Mono",monospace;font-size:11px;background:var(--soft);padding:1px 6px;border-radius:6px;margin-left:4px}
+
+.filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:5px 11px;font-size:12px}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.filters input{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:5px 12px;font-size:12px;min-width:180px;outline:none;margin-left:auto}
+
+/* sleeping */
+.sleep{background:#fff4e6;border:1px solid #f1d2a6;border-radius:var(--r);padding:12px 14px;margin-bottom:14px}
+.sleep h3{margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:8px}
+.sleep .items{display:flex;gap:8px;flex-wrap:wrap}
+.sleep .it{background:#fff;border:1px solid #f1d2a6;border-radius:10px;padding:6px 10px;font-size:13px;cursor:pointer}
+.sleep .it em{font-style:normal;color:var(--paused);font-family:"IBM Plex Mono",monospace;font-size:11px;margin-left:6px}
+
+/* board */
+.board{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:10px;overflow-x:auto;padding-bottom:6px}
+.col{background:var(--soft);border-radius:var(--r);padding:8px;min-height:200px}
+.col.over{outline:2px dashed var(--ink);outline-offset:-4px}
+.colh{display:flex;align-items:center;gap:7px;padding:4px 6px 10px;font-weight:700;font-size:13px}
+.colh i{width:9px;height:9px;border-radius:50%}
+.colh .n{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--sub)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 11px;margin-bottom:7px;cursor:pointer;transition:.12s;position:relative}
+.card:hover{border-color:#bdb5a3;box-shadow:0 3px 10px rgba(0,0,0,.05)}
+.card.dragging{opacity:.4}
+.card .t{font-weight:600;font-size:14px;line-height:1.35;padding-right:6px}
+.card .meta{display:flex;gap:6px;align-items:center;margin-top:6px;font-size:11px;color:var(--sub);flex-wrap:wrap}
+.cat{font-size:11px;padding:1px 7px;border-radius:6px;background:var(--soft);color:var(--sub);font-weight:500}
+.age{font-family:"IBM Plex Mono",monospace}
+.age.old{color:var(--paused);font-weight:600}
+.card .nx{font-size:12px;color:var(--sub);margin-top:6px;border-top:1px dashed var(--line);padding-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.svc{display:inline-flex;align-items:center;color:var(--ink)}
+.svc.web,.ext.web{color:#0e8f8a}
+.ext{display:inline-flex;align-items:center;gap:5px;text-decoration:none;font-size:12px;white-space:nowrap}
+.ext:hover{text-decoration:underline}
+.urlrow{display:flex;gap:5px}
+.urlrow input{flex:1;min-width:0}
+.fld>label svg{vertical-align:-2px;margin-right:2px}
+.vis{font-family:"IBM Plex Mono",monospace;color:#0e8f8a;font-weight:600}
+.visbox{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.visbox div{background:#eef8f7;border-radius:10px;padding:8px 10px}
+.visbox b{display:block;font-size:18px}
+.visbox span{font-size:11px;color:var(--sub)}
+.newb{display:inline-block;font-size:9.5px;font-weight:700;background:var(--trash);color:#fff;border-radius:5px;padding:1px 5px;margin-right:5px;vertical-align:2px;letter-spacing:.03em}
+.inbox{background:#eef6ff;border:1px solid #c7dcf3;border-radius:var(--r);padding:12px 14px;margin-bottom:14px}
+.inbox h3{margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:8px}
+.inbox h3 span{font-weight:400;color:var(--sub);font-size:12px}
+.inbox h3 .x{margin-left:auto;font-size:15px}
+.ilist{display:flex;flex-direction:column;gap:5px}
+.irow{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d7e5f5;border-radius:10px;padding:6px 9px;font-size:13px;flex-wrap:wrap}
+.isrc{font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;background:var(--soft);color:var(--sub)}
+.isrc.artifact{background:#f3efff;color:#6a5ed6}.isrc.github{background:#f1f0ee;color:#333}.isrc.netlify{background:#e6f6f5;color:#0e8f8a}
+.it2{font-weight:600}
+.iarrow{color:var(--sub);font-size:12px}
+.iarrow b{color:var(--ink);cursor:pointer;text-decoration:underline;text-decoration-color:#bbb}
+.irow .btn{margin-left:auto}
+.rdots{display:flex;gap:3px;margin-left:auto}
+.rdots s{width:6px;height:6px;border-radius:50%;background:var(--line);text-decoration:none}
+.rdots s.on{background:var(--active)}
+
+/* list */
+table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+th{font-size:12px;color:var(--sub);font-weight:600;background:#faf7f0;cursor:pointer;user-select:none;white-space:nowrap}
+tr.r:hover td{background:#faf7f0;cursor:pointer}
+.st{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;white-space:nowrap}
+.st i{width:8px;height:8px;border-radius:50%}
+.tblwrap{overflow-x:auto}
+
+/* rules */
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;margin-bottom:18px}
+.rule{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.rule h3{margin:0;font-size:15px;display:flex;gap:8px;align-items:center}
+.rule p{margin:6px 0 10px;color:var(--sub);font-size:13px}
+.bar{height:6px;background:var(--soft);border-radius:9px;overflow:hidden;margin:6px 0}
+.bar b{display:block;height:100%;background:var(--active)}
+.miss{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}
+.miss span{font-size:11px;background:var(--soft);padding:2px 7px;border-radius:6px}
+.scope{font-size:11px;font-weight:500;padding:1px 7px;border-radius:6px;border:1px solid var(--line);color:var(--sub)}
+.matrix th.rc{writing-mode:vertical-rl;transform:rotate(180deg);height:120px;text-align:left;font-size:12px}
+.matrix td.c{text-align:center}
+.matrix input{width:16px;height:16px;accent-color:var(--active)}
+.matrix td.na{color:#ccc;text-align:center}
+
+/* cleanup */
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.sec h3{margin:0 0 4px;font-size:15px}
+.sec .d{color:var(--sub);font-size:13px;margin:0 0 10px}
+.lrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13px}
+.lrow:first-of-type{border-top:none}
+.kind{font-size:10px;font-weight:600;padding:1px 6px;border-radius:5px;background:var(--soft);color:var(--sub);min-width:34px;text-align:center}
+.kind.main{background:#e3f4ec;color:var(--active)}
+.lrow a{flex:1;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow a:hover{text-decoration:underline}
+.lrow .app{color:var(--sub);font-size:12px;white-space:nowrap}
+.flag{border:1px solid var(--line);background:#fff;border-radius:8px;padding:3px 8px;font-size:12px;white-space:nowrap}
+.flag.on{background:var(--trash);border-color:var(--trash);color:#fff}
+.empty{padding:30px;text-align:center;color:var(--sub)}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(20,19,17,.35);opacity:0;pointer-events:none;transition:.2s;z-index:20}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--panel);z-index:21;transform:translateX(100%);transition:.25s cubic-bezier(.3,.7,.3,1);display:flex;flex-direction:column;box-shadow:-10px 0 40px rgba(0,0,0,.12)}
+.drawer.on{transform:none}
+.dh{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
+.dh input{flex:1;border:none;font-size:21px;font-weight:700;background:transparent;outline:none;letter-spacing:-.02em;min-width:0}
+.dbody{flex:1;overflow-y:auto;padding:14px 18px 30px}
+.fld{margin-bottom:14px}
+.fld>label{display:block;font-size:12px;font-weight:600;color:var(--sub);margin-bottom:5px}
+.fld textarea,.fld input[type=text],.fld input[type=date],.fld select{width:100%;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;outline:none;resize:vertical}
+.fld textarea:focus,.fld input:focus{border-color:var(--ink)}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:#fff;border-radius:9px;padding:6px 10px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px}
+.seg button i{width:7px;height:7px;border-radius:50%}
+.seg button.on{color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two .fld:nth-child(3){grid-column:1 / -1}
+.kids{display:flex;flex-direction:column;gap:3px;margin-top:7px;padding-top:6px;border-top:1px dashed var(--line)}
+.kid{display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 6px;border-radius:7px;background:var(--soft)}
+.kid:hover{background:#e4ddcc}
+.kid i{width:6px;height:6px;border-radius:50%;flex:none}
+.kid em{font-style:normal;margin-left:auto;color:var(--sub);font-family:"IBM Plex Mono",monospace;font-size:10px}
+tr.sub td{background:#fcfaf5;font-size:12px}
+.subm{color:var(--sub);margin:0 6px 0 8px}
+.kidn{font-size:10px;background:var(--soft);padding:1px 6px;border-radius:5px;margin-left:6px;color:var(--sub);font-weight:500}
+.rchk{display:flex;align-items:flex-start;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:10px;margin-bottom:5px;font-size:13px;background:#fff}
+.rchk input{margin-top:3px;accent-color:var(--active)}
+.rchk small{display:block;color:var(--sub);font-size:11px}
+.addl{display:grid;grid-template-columns:1fr 1fr 90px auto;gap:5px;margin-top:8px}
+.addl input,.addl select{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px;background:#fff;min-width:0}
+.dfoot{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.x{background:none;border:none;font-size:20px;line-height:1;color:var(--sub);padding:4px}
+
+/* modal, toast */
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:40;background:rgba(20,19,17,.4);padding:16px}
+.modal.on{display:flex}
+.mbox{background:var(--panel);border-radius:16px;padding:18px;width:min(560px,100%);max-height:90vh;overflow:auto}
+.mbox h3{margin:0 0 6px}
+.ver{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--panel);color:var(--sub);border-radius:8px;padding:3px 8px;vertical-align:middle;letter-spacing:0}
+.ver:hover{border-color:var(--ink);color:var(--ink)}
+.mbox.wide{width:min(900px,100%);padding:0;display:flex;flex-direction:column;max-height:92vh}
+.vh{display:flex;align-items:center;gap:10px;padding:16px 20px 0}
+.vh h3{margin:0;font-size:18px}
+.vh .vnum{font-family:"IBM Plex Mono",monospace;background:var(--ink);color:#fff;border-radius:7px;padding:2px 8px;font-size:13px}
+.vtabs{display:flex;gap:4px;padding:10px 20px 0;border-bottom:1px solid var(--line)}
+.vbody{padding:16px 20px 22px;overflow-y:auto}
+.vlog{border-left:2px solid var(--line);margin-left:6px;padding-left:16px}
+.vlog .e{position:relative;margin-bottom:16px}
+.vlog .e::before{content:"";position:absolute;left:-22px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--line);border:2px solid var(--panel)}
+.vlog .e.cur::before{background:var(--active)}
+.vlog .e b{font-family:"IBM Plex Mono",monospace}
+.vlog .e .dt{color:var(--sub);font-size:12px;margin-left:6px}
+.vlog .e .tt{font-weight:600;margin-left:6px}
+.vlog ul{margin:5px 0 0;padding-left:18px;color:#3a3833;font-size:13px}
+.vlog li{margin:2px 0}
+.dg{width:100%;height:auto;display:block;background:#faf7f0;border:1px solid var(--line);border-radius:14px;margin:6px 0 14px}
+.dg text{font-family:"IBM Plex Sans KR",sans-serif}
+.vsec h4{margin:14px 0 6px;font-size:14px}
+.vsec p{margin:0 0 8px;font-size:13px;color:#3a3833}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.vcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:12.5px;color:#3a3833}
+.vcard b{display:block;font-size:13px;color:var(--ink);margin-bottom:3px}
+.vcard code{font-family:"IBM Plex Mono",monospace;font-size:11.5px;background:var(--soft);padding:0 4px;border-radius:4px}
+
+.mbox p{margin:0 0 10px;color:var(--sub);font-size:13px}
+.mbox textarea{width:100%;height:220px;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:13px;background:#fff}
+.mbox .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(30px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;opacity:0;transition:.25s;z-index:50;pointer-events:none;max-width:90%}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.banner{background:#fdecea;border:1px solid #f3c3be;color:#8a2a24;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:13px;display:none}
+.banner.on{display:block}
+
+@media (max-width:900px){
+  .stats{grid-template-columns:repeat(4,1fr)}
+  .board{grid-template-columns:repeat(5,82%);scroll-snap-type:x mandatory}
+  .col{scroll-snap-align:start}
+  .filters input{margin-left:0;flex:1}
+}
+@media (max-width:520px){
+  .stats{grid-template-columns:repeat(3,1fr)}
+  .brand h1{font-size:24px}
+  .two{grid-template-columns:1fr}
+  .addl{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1><span class="dot"></span>앱 관리실 <button class="ver" data-act="ver" id="verBtn" title="업데이트 기록과 작동 원리">v—</button></h1>
+      <p>만든 앱 전부를 한눈에 — 겹치지 않게, 묻히지 않게, 규칙은 한 번에.</p>
+    </div>
+    <div class="hright">
+      <span class="sync" id="sync">불러오는 중…</span>
+      <span class="sync" id="scanInfo" title="스캔 상태">스캔 확인 중…</span>
+      <button class="btn ghost" data-act="refresh" id="refreshBtn">🔄 새로고침</button>
+      <button class="btn" data-act="new-app">+ 앱 추가</button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <div id="inbox"></div>
+  <div class="stats" id="stats"></div>
+
+  <div class="checker">
+    <label>새로 만들기 전에 — 비슷한 앱이 이미 있는지 확인</label>
+    <div class="row">
+      <input id="chkIn" placeholder="예: 레이싱 게임, 영어 단어 공부, 일정 관리…" autocomplete="off">
+      <button class="btn" data-act="chk-add">아이디어로 등록</button>
+    </div>
+    <div id="chkOut"></div>
+  </div>
+
+  <nav class="tabs" id="tabs"></nav>
+  <main id="view"></main>
+</div>
+
+<div class="scrim" id="scrim" data-act="close"></div>
+<aside class="drawer" id="drawer"></aside>
+
+<div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const ST = {
+  active:{l:'진행 중',c:'var(--active)'},
+  paused:{l:'멈춤',c:'var(--paused)'},
+  idea:{l:'아이디어',c:'var(--idea)'},
+  done:{l:'완성',c:'var(--done)'},
+  trash:{l:'삭제 예정',c:'var(--trash)'}
+};
+const ORDER = ['active','paused','idea','done','trash'];
+const CATS = ['게임','학습','음악','도구','생활','아이디어'];
+const KINDS = {main:'본 앱',draft:'시안',design:'디자인',doc:'문서',etc:'기타'};
+const SLEEP_DAYS = 14;
+
+let apps = [], rules = [];
+let db = null, readOnly = false, loaded = {apps:false, rules:false};
+let view = ['board','list','rules','clean'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'board';
+let filt = {cat:'전체', q:'', st:null};
+let sortBy = {k:'updated', dir:-1};
+let openId = null;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const todayStr = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+function days(d){ if(!d) return null; const t = new Date(d+'T00:00:00'); const n = new Date(todayStr()+'T00:00:00'); return Math.round((n-t)/864e5); }
+function ageTxt(d){ const n = days(d); if(n===null) return '—'; if(n<=0) return '오늘'; if(n===1) return '어제'; if(n<30) return n+'일 전'; return Math.floor(n/30)+'달 전'; }
+const parentOf = a => a.parent ? apps.find(p => p.id===a.parent && p.id!==a.id && !p.parent) : null;
+const isChild = a => !!parentOf(a);
+const kidsOf = p => apps.filter(c => c.parent===p.id && isChild(c));
+const tops = () => apps.filter(a => !isChild(a));
+const lastUpd = a => [a.updated||'', ...kidsOf(a).map(k=>k.updated||'')].sort().pop();
+const isSleeping = a => a.status==='active' && days(lastUpd(a)) >= SLEEP_DAYS;
+const mainLink = a => (a.links||[]).find(l => l.kind==='main') || (a.links||[])[0];
+const ruleFits = (r, a) => r.scope==='all' || (r.scope==='game' ? a.cat==='게임' : true);
+const fullUrl = u => { u = String(u||'').trim(); if(!u) return ''; return /^https?:\/\//.test(u) ? u : 'https://'+u; };
+const shortUrl = u => String(u||'').replace(/^https?:\/\//,'').replace(/^github\.com\//,'').replace(/\/$/,'');
+const netlifyName = u => { const m = String(u||'').match(/([a-z0-9-]+)\.netlify\.app/i); return m ? m[1] : ''; };
+const ICON_GH = '<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>';
+const ICON_WEB = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M1.5 8h13M8 1.5c2 2 2.8 4.2 2.8 6.5S10 12.5 8 14.5C6 12.5 5.2 10.3 5.2 8S6 3.5 8 1.5z"/></svg>';
+
+/* ---------- persistence ---------- */
+const dirty = {apps:false, rules:false, seen:false}, writing = {apps:false, rules:false, seen:false}, again = {apps:false, rules:false, seen:false}, timers = {};
+let seen = {keys:[], ignored:[], log:[]}, scan = null;
+const payloadOf = which => which==='seen' ? JSON.parse(JSON.stringify(seen)) : {items: JSON.parse(JSON.stringify(which==='apps'?apps:rules)), savedAt: new Date().toISOString()};
+function setSync(t){ $('#sync').textContent = t; }
+function save(which){
+  dirty[which] = true;
+  clearTimeout(timers[which]);
+  timers[which] = setTimeout(() => flush(which), 500);
+}
+async function flush(which){
+  const data = which==='apps' ? apps : which==='rules' ? rules : seen;
+  if(!db){ try{ localStorage.setItem('appmgr_'+which, JSON.stringify(data)); }catch(e){} dirty[which]=false; setSync('이 브라우저에만 저장됨'); return; }
+  if(readOnly){ dirty[which]=false; return; }
+  if(writing[which]){ again[which] = true; return; }
+  writing[which] = true; setSync('저장 중…');
+  try{
+    await db.doc('manager/'+which).set(payloadOf(which));
+    setSync('저장됨 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));
+  }catch(e){
+    if(e && e.code==='invalid_argument'){ readOnly = true; showBanner('이 화면에서는 수정 권한이 없어 보기 전용으로 열렸어요.'); }
+    else if(e && e.code==='unavailable'){ setTimeout(()=>flush(which), 1500 + Math.random()*1000); }
+    else setSync('저장 실패');
+  }
+  writing[which] = false;
+  if(again[which]){ again[which] = false; flush(which); } else dirty[which] = false;
+}
+function showBanner(t){ const b = $('#banner'); b.textContent = t; b.classList.add('on'); }
+
+async function init(){
+  render();
+  const c = window.claude;
+  try{ db = c && c.use ? await c.use('db') : null; }catch(e){ db = null; }
+  if(!db){
+    try{ apps = JSON.parse(localStorage.getItem('appmgr_apps')||'[]'); rules = JSON.parse(localStorage.getItem('appmgr_rules')||'[]'); }catch(e){}
+    loaded.apps = loaded.rules = true;
+    showBanner('저장소에 연결되지 않았어요. 지금은 이 브라우저에만 임시로 저장됩니다. claude.ai에서 로그인한 상태로 열면 전체 목록이 보여요.');
+    setSync('오프라인'); render(); return;
+  }
+  const timer = setTimeout(() => { if(!loaded.apps) setSync('저장소 응답이 늦어요…'); }, 10000);
+  const sub = (which) => db.doc('manager/'+which).onSnapshot(snap => {
+    if(dirty[which] || writing[which]) return;
+    const d = snap.exists ? snap.data() : null;
+    if(which==='scan'){ scan = d ? JSON.parse(JSON.stringify(d)) : null; loaded.scan = true; renderScanInfo(); maybeIngest(); return; }
+    if(which==='seen'){ const x = d ? JSON.parse(JSON.stringify(d)) : {}; seen = {keys:x.keys||[], ignored:x.ignored||[], log:x.log||[], lastScan:x.lastScan||''}; loaded.seen = true; renderInbox(); maybeIngest(); return; }
+    const items = d && Array.isArray(d.items) ? JSON.parse(JSON.stringify(d.items)) : [];
+    if(which==='apps') apps = items; else rules = items;
+    loaded[which] = true;
+    if(!snap.metadata.fromCache){ clearTimeout(timer); setSync('최신 상태'); if(which==='apps') loaded.appsFresh = true; }
+    render(); maybeIngest();
+  }, err => { clearTimeout(timer); loaded[which] = true; setSync('불러오기 실패'); render(); });
+  sub('apps'); sub('rules'); sub('scan'); sub('seen');
+}
+
+
+/* ---------- auto discovery ---------- */
+const SELF_URL = 'https://claude.ai/artifact/136PLKwuEmMuERjrcoybpC';
+const REPO_SINCE = '2026-10-01';
+const NOISE = /시안|레이아웃|디자인|화면|인트로|컨셉|프로토타입|스토리\s*라인|노트|버전|v\d+(\.\d+)?/gi;
+const normId = s => String(s||'').toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
+const nfBase = n => normId(String(n||'').replace(/-[a-z0-9]{4,6}$/,'').replace(/^js/,''));
+const artId = u => { const m = String(u||'').match(/claude\.ai\/artifact\/([A-Za-z0-9]+)/); return m ? m[1] : ''; };
+function simScore(q, t){ const g = grams(q); if(!g.size) return 0; const h = grams(t); let n=0; g.forEach(x=>{ if(h.has(x)) n++; }); return n/g.size; }
+function bestApp(text){
+  const q = String(text||'').replace(NOISE,' ').trim();
+  let best = null, score = 0;
+  apps.forEach(a => {
+    const c = [a.name, ...(a.links||[]).map(l=>l.title)].filter(Boolean);
+    const s = Math.max(0, ...c.map(x => simScore(q, String(x).replace(NOISE,' '))));
+    if(s > score){ score = s; best = a; }
+  });
+  return {app: best, score};
+}
+function guessCat(t){
+  t = String(t||'');
+  if(/게임|GP|그랑프리|레이스|레이싱|사격|전투|RPG|퍼즐|오락|슈팅|카트|대전|모험/i.test(t)) return '게임';
+  if(/영어|일본어|단어|학습|공부|퀴즈|study|daily|파닉스|스터디/i.test(t)) return '학습';
+  if(/음악|클래식|노래|music|라디오|플레이리스트/i.test(t)) return '음악';
+  if(/장바구니|할일|할 일|운동|달력|일정|배송|가계부|식단|쇼핑|todo|메모/i.test(t)) return '생활';
+  return '도구';
+}
+const kindOf = f => f.type==='Design' ? 'design' : f.type==='Docs' ? 'doc' : /시안|프로토타입|컨셉|레이아웃/.test(f.title) ? 'draft' : 'etc';
+function isKnown(f){
+  if(seen.keys.includes(f.key) || seen.ignored.includes(f.key)) return true;
+  if(f.src==='artifact'){ const id = artId(f.url); return id===artId(SELF_URL) || apps.some(a => (a.links||[]).some(l => artId(l.url)===id)); }
+  if(f.src==='netlify'){ const host = f.name+'.netlify.app'; return apps.some(a => String(a.netlify||'').includes(host) || (a.links||[]).some(l => String(l.url).includes(host))); }
+  if(f.src==='github'){ const n = f.name.toLowerCase(); return apps.some(a => String(a.github||'').toLowerCase().replace(/\/$/,'').endsWith('/'+n)); }
+  return false;
+}
+function logIt(f, action, app, extra){ seen.log.unshift(Object.assign({key:f.key, title:f.title||f.name, src:f.src, action, appId:app?app.id:'', app:app?app.name:'', at:new Date().toISOString()}, extra||{})); seen.log = seen.log.slice(0,40); }
+const kstDay = v => { if(!v) return ''; if(/^\d{4}-\d{2}-\d{2}$/.test(v)) return v; try{ return new Date(v).toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'}); }catch(e){ return String(v).slice(0,10); } };
+function byDesc(desc){ const d = String(desc||''); if(d.length < 3) return null; return tops().filter(a => a.name && a.name.length >= 3).sort((x,y)=>y.name.length-x.name.length).find(a => d.includes(a.name.replace(/\s*\(.*\)$/,''))) || null; }
+function bumpDate(f){
+  const day = kstDay(f.updated || f.pushed); if(!day) return false;
+  let a = null;
+  if(f.src==='artifact'){ const id = artId(f.url); a = apps.find(x => (x.links||[]).some(l => artId(l.url)===id)); }
+  else if(f.src==='github'){ const n = f.name.toLowerCase(); a = apps.find(x => String(x.github||'').toLowerCase().replace(/\/$/,'').endsWith('/'+n)); }
+  if(a && a.id!=='nfunknown' && day > (a.updated||'')){ a.updated = day; return true; }
+  return false;
+}
+function placeArtifact(f){
+  if(/^앱 관리실/.test(f.title)) return;
+  let {app, score} = bestApp(f.title);
+  const viaDesc = byDesc(f.desc);
+  if(viaDesc && !(app && score >= 0.5)){ app = viaDesc; score = 1; }
+  const day = kstDay(f.updated) || todayStr();
+  if(app && score >= 0.5){
+    const l = {id:uid(), title:f.title, url:f.url, kind:kindOf(f), del:false};
+    app.links = app.links||[]; app.links.push(l);
+    if(day > (app.updated||'')) app.updated = day;
+    logIt(f, 'attach', app, {linkId:l.id});
+  } else {
+    const a = {id:uid(), name:f.title, cat:guessCat(f.title+' '+(f.desc||'')), status:'active', desc:f.desc && f.desc!==f.title ? f.desc : '', next:'', memo:'자동 발견', tags:[], updated:day, links:[{id:uid(), title:f.title, url:f.url, kind:f.type==='Docs'?'doc':'main', del:false}], rules:{}, github:'', netlify:'', isNew:true};
+    apps.unshift(a); logIt(f, 'new', a);
+  }
+}
+function placeRepo(f){
+  if((f.pushed||'') < REPO_SINCE) return false;
+  const n = normId(f.name);
+  let app = apps.find(a => !a.github && (nfBase(netlifyName(a.netlify))===n));
+  if(!app){ const m = bestApp(f.name); if(m.app && m.score >= 0.6 && !m.app.github) app = m.app; }
+  if(app){ app.github = f.url; app.rules = app.rules||{}; if(rules.some(r=>r.id==='r5')) app.rules.r5 = true; logIt(f, 'github', app); }
+  else { const a = {id:uid(), name:f.name, cat:guessCat(f.name), status:'active', desc:'GitHub 저장소에서 자동 발견 — 어떤 앱인지 확인해 주세요', next:'', memo:'자동 발견', tags:[], updated:kstDay(f.pushed)||todayStr(), links:[], rules:{r5:true}, github:f.url, netlify:'', isNew:true}; apps.unshift(a); logIt(f, 'new', a); }
+  return true;
+}
+function placeNetlify(f){
+  const b = nfBase(f.name);
+  let app = apps.find(a => a.github && normId(String(a.github).split('/').pop())===b);
+  if(!app){ const m = bestApp(f.name); if(m.app && m.score >= 0.6) app = m.app; }
+  const url = 'https://'+f.name+'.netlify.app';
+  if(app && !app.netlify){ app.netlify = url; logIt(f, 'netlify', app); return; }
+  if(app){ const l = {id:uid(), title:f.name+'.netlify.app', url, kind:'etc', del:false}; app.links.push(l); logIt(f, 'attach', app, {linkId:l.id}); return; }
+  let box = apps.find(a => a.id==='nfunknown');
+  if(box){ const l = {id:uid(), title:f.name+' (새 Netlify 사이트)', url, kind:'etc', del:false}; box.links.push(l); logIt(f, 'attach', box, {linkId:l.id}); }
+  else { const a = {id:uid(), name:'Netlify: '+f.name, cat:'도구', status:'paused', desc:'Netlify에서 자동 발견 — 어떤 앱인지 확인해 주세요', next:'', memo:'자동 발견', tags:[], updated:todayStr(), links:[], rules:{}, github:'', netlify:url, isNew:true}; apps.unshift(a); logIt(f, 'new', a); }
+}
+let liveNetlify = [];
+function foundList(){
+  const out = [], s = scan || {};
+  (s.artifacts||[]).forEach(x => out.push({src:'artifact', key:'a:'+(x.slug||artId(x.url)), title:x.title, url:x.url, updated:x.updated, type:x.type||'', desc:x.desc||''}));
+  (s.repos||[]).forEach(x => out.push({src:'github', key:'g:'+x.name, name:x.name, title:x.name, url:x.url||('https://github.com/kwonjisung/'+x.name), pushed:x.pushed||''}));
+  const nf = new Map(); (s.netlify||[]).forEach(x => nf.set(x.name, x)); liveNetlify.forEach(x => nf.set(x.name, x));
+  nf.forEach(x => out.push({src:'netlify', key:'n:'+x.name, name:x.name, title:x.name, url:'https://'+x.name+'.netlify.app'}));
+  return out;
+}
+function ingest(){
+  if(readOnly || !loaded.apps || !loaded.seen) return 0;
+  let n = 0, bumped = 0;
+  foundList().forEach(f => {
+    if(bumpDate(f)) bumped++;
+    if(isKnown(f)){ if(!seen.keys.includes(f.key)) seen.keys.push(f.key); return; }
+    let placed = true;
+    if(f.src==='artifact') placeArtifact(f);
+    else if(f.src==='github') placed = placeRepo(f);
+    else placeNetlify(f);
+    if(placed !== false){ seen.keys.push(f.key); n++; }
+  });
+  seen.lastScan = scan && scan.scannedAt || seen.lastScan || '';
+  save('seen');
+  if(n || bumped){ save('apps'); render(); }
+  if(n) toast('새로 발견한 '+n+'개를 배치했어요');
+  return n;
+}
+let ingestedFor = null;
+function maybeIngest(){
+  if(!loaded.appsFresh || !loaded.seen || !loaded.scan || !scan) return;
+  if(ingestedFor === scan.scannedAt) return;
+  ingestedFor = scan.scannedAt;
+  ingest();
+}
+function undoLog(i){
+  const e = seen.log[i]; if(!e || e.undone) return;
+  const a = apps.find(x => x.id===e.appId);
+  if(e.action==='new') apps = apps.filter(x => x.id!==e.appId);
+  else if(a && e.action==='attach') a.links = (a.links||[]).filter(l => l.id!==e.linkId);
+  else if(a && e.action==='github') a.github = '';
+  else if(a && e.action==='netlify') a.netlify = '';
+  e.undone = true; if(!seen.ignored.includes(e.key)) seen.ignored.push(e.key);
+  save('apps'); save('seen'); render(); toast('되돌렸어요 — 다음 스캔에서도 다시 넣지 않아요');
+}
+function renderInbox(){
+  const box = $('#inbox'); if(!box) return;
+  const weekAgo = new Date(Date.now()-7*864e5).toISOString();
+  const items = seen.log.map((e,i)=>({e,i})).filter(({e}) => !e.undone && e.at > weekAgo);
+  if(!items.length){ box.innerHTML = ''; return; }
+  const label = {new:'새 앱으로', attach:'에 붙임', github:'에 GitHub 연결', netlify:'에 Netlify 연결'};
+  const src = {artifact:'Claude', github:'GitHub', netlify:'Netlify'};
+  box.innerHTML = `<div class="inbox"><h3>🔎 새로 들어온 것 <span>최근 7일 · 자동 배치</span><button class="x" data-act="inbox-clear" title="목록 비우기">✕</button></h3>
+    <div class="ilist">${items.slice(0,12).map(({e,i}) => `<div class="irow"><span class="isrc ${e.src}">${src[e.src]||''}</span><span class="it2">${esc(e.title)}</span>
+      <span class="iarrow">${e.action==='new' ? `→ <b data-act="open" data-id="${e.appId}">새 앱</b>` : `→ <b data-act="open" data-id="${e.appId}">${esc(e.app)}</b>${label[e.action]}`}</span>
+      <button class="btn ghost sm" data-act="undo" data-i="${i}">되돌리기</button></div>`).join('')}</div></div>`;
+}
+function renderScanInfo(){
+  const el = $('#scanInfo'); if(!el) return;
+  if(!scan || !scan.scannedAt){ el.textContent = '스캔 기록 없음'; return; }
+  const d = new Date(scan.scannedAt);
+  el.textContent = '마지막 스캔 ' + d.toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  el.title = 'Claude가 아티팩트·GitHub·Netlify를 마지막으로 훑은 시각 — 채팅에서 "앱 관리실 스캔해줘"라고 하면 다시 훑어요';
+}
+/* Netlify live (page → connector) */
+const NF = 'Netlify';
+const deep = p => { let x = p; for(let k=0;k<3 && typeof x==='string';k++){ try{ x = JSON.parse(x); }catch(e){ break; } } return x; };
+async function nfCall(tool, schema){
+  const c = window.claude; const mcp = c && c.use ? await c.use('mcp') : null; if(!mcp) throw {code:'not_granted'};
+  const r = await mcp.callTool(NF, tool, {selectSchema: Object.assign({aiAgentName:'app-manager'}, schema)});
+  return deep(r.payload !== undefined ? r.payload : (r.content&&r.content[0]&&r.content[0].text));
+}
+function nfErrText(e){
+  const c = e && e.code;
+  if(c==='server_not_connected') return 'Netlify가 연결돼 있지 않아요 (claude.ai 설정 → 커넥터에서 추가)';
+  if(c==='needs_reauth') return 'Netlify 다시 로그인이 필요해요 (claude.ai 설정 → 커넥터)';
+  if(c==='not_in_manifest' || c==='approval_required') return 'Netlify 사용을 허용하지 않았어요 — 새로고침을 다시 누르면 다시 물어봐요';
+  if(c==='not_granted' || c==='capability_disabled') return '이 화면에서는 Netlify를 부를 수 없어요';
+  return 'Netlify 응답이 없어요 — 잠시 후 다시';
+}
+let refreshing = false;
+async function refreshAll(){
+  if(refreshing) return; refreshing = true;
+  const btn = $('#refreshBtn'); btn.disabled = true; btn.textContent = '🔄 확인 중…';
+  let msg = [];
+  try{
+    const projects = await nfCall('netlify-project-services-reader', {operation:'get-projects', params:{}});
+    const list = Array.isArray(projects) ? projects : [];
+    liveNetlify = list.map(p => ({name:p.name, id:p.id}));
+    const n = ingest();
+    msg.push(n ? '새로 '+n+'개 배치' : '새 앱 없음');
+    btn.textContent = '🔄 방문 수…';
+    const to = Date.now(), from = to - 7*864e5;
+    let upd = 0;
+    for(const a of apps){
+      const host = netlifyName(a.netlify); if(!host) continue;
+      const p = list.find(x => x.name===host); if(!p) continue;
+      try{
+        const r = await nfCall('netlify-observability-services-reader', {operation:'get-topk', params:{siteId:p.id, from_ts:from, to_ts:to, query_name:'client_address', per_page:100, filters:[{field:'URL', op:'=', value:'https://'+host+'.netlify.app/'}]}});
+        const items = (((r||{}).data||[])[0]||{}).attributes ? r.data[0].attributes.items||[] : [];
+        a.visits = {ips:items.length, reqs:items.reduce((s,x)=>s+(x.count||0),0), days:7, at:todayStr()};
+        upd++;
+      }catch(e){ /* keep last visits */ }
+    }
+    if(upd){ save('apps'); render(); msg.push('방문 수 '+upd+'곳 갱신'); }
+  }catch(e){
+    msg.push(nfErrText(e));
+    const n = ingest(); if(n) msg.push('스캔 결과에서 '+n+'개 배치');
+  }
+  btn.disabled = false; btn.textContent = '🔄 새로고침'; refreshing = false;
+  toast(msg.join(' · '));
+}
+
+/* ---------- similarity ---------- */
+function grams(s){
+  s = String(s||'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ');
+  const out = new Set();
+  s.split(' ').filter(Boolean).forEach(w => {
+    if(w.length===1) out.add(w);
+    for(let i=0;i<w.length-1;i++) out.add(w.slice(i,i+2));
+  });
+  return out;
+}
+function similar(q){
+  const g = grams(q); if(!g.size) return [];
+  return apps.map(a => {
+    const hay = grams([a.name, (a.tags||[]).join(' '), a.desc, a.cat].join(' '));
+    const nameG = grams(a.name);
+    let hit = 0, nameHit = 0;
+    g.forEach(x => { if(hay.has(x)) hit++; if(nameG.has(x)) nameHit++; });
+    const score = Math.min(1, hit / g.size * 0.85 + (nameHit / g.size) * 0.3);
+    return {a, score};
+  }).filter(x => x.score >= 0.25).sort((x,y) => y.score - x.score).slice(0,6);
+}
+function dupesOf(a){
+  const q = [a.name, (a.tags||[]).join(' ')].join(' ');
+  return similar(q).filter(x => x.a.id !== a.id && x.score >= 0.4);
+}
+
+/* ---------- render ---------- */
+function render(){
+  renderInbox();
+  renderStats(); renderTabs(); renderView(); renderChecker();
+  if(openId) renderDrawer();
+}
+function counts(){
+  const T = tops();
+  const c = {all:T.length, sub:apps.length-T.length, sleep:T.filter(isSleeping).length};
+  ORDER.forEach(s => c[s] = T.filter(a => a.status===s).length);
+  return c;
+}
+function renderStats(){
+  const c = counts();
+  const links = apps.reduce((n,a) => n + (a.links||[]).length, 0);
+  const gh = apps.filter(a=>a.github).length, nf = apps.filter(a=>a.netlify).length, vs = apps.reduce((n,a)=>n+(a.visits?a.visits.ips:0),0);
+  $('#stats').innerHTML =
+    `<div class="stat" data-act="stat" data-st=""><b>${c.all}</b><span>전체 앱${c.sub?` (+하위 ${c.sub})`:''} · 아티팩트 ${links} · GitHub ${gh} · 배포 ${nf} · 7일 방문 기기 ${vs}</span></div>` +
+    ORDER.map(s => `<div class="stat" data-act="stat" data-st="${s}"><b>${c[s]}</b><span><i style="background:${ST[s].c}"></i>${ST[s].l}</span></div>`).join('') +
+    `<div class="stat ${c.sleep?'warn':''}" data-act="stat" data-st="sleep"><b>${c.sleep}</b><span>💤 잠든 앱 (${SLEEP_DAYS}일+)</span></div>`;
+}
+function renderTabs(){
+  const cleanN = apps.filter(a=>a.status==='trash').length + apps.reduce((n,a)=>n+(a.links||[]).filter(l=>l.del).length,0);
+  const T = [['board','보드'],['list','전체 목록'],['rules','공통 규칙',rules.length],['clean','정리함',cleanN]];
+  $('#tabs').innerHTML = T.map(([k,l,n]) => `<button class="tab ${view===k?'on':''}" data-act="tab" data-v="${k}">${l}${n!==undefined?`<span class="n">${n}</span>`:''}</button>`).join('');
+}
+function filtered(){
+  const q = filt.q.trim().toLowerCase();
+  const hit = a => [a.name,a.desc,(a.tags||[]).join(' '),a.next,a.github,a.netlify].join(' ').toLowerCase().includes(q);
+  return tops().filter(a => {
+    if(filt.cat!=='전체' && a.cat!==filt.cat) return false;
+    if(filt.st==='sleep' && !isSleeping(a)) return false;
+    if(filt.st && filt.st!=='sleep' && a.status!==filt.st) return false;
+    if(q && !hit(a) && !kidsOf(a).some(hit)) return false;
+    return true;
+  });
+}
+function filterBar(){
+  return `<div class="filters">
+    ${['전체',...CATS].map(c => `<button class="chip ${filt.cat===c?'on':''}" data-act="cat" data-c="${c}">${c}</button>`).join('')}
+    ${filt.st ? `<button class="chip on" data-act="clear-st">${filt.st==='sleep'?'💤 잠든 앱':ST[filt.st].l} ✕</button>` : ''}
+    <input id="q" placeholder="이름·태그·메모 검색" value="${esc(filt.q)}">
+  </div>`;
+}
+function renderView(){
+  const v = $('#view');
+  if(!loaded.apps){ v.innerHTML = `<div class="empty">목록을 불러오는 중…</div>`; return; }
+  if(view==='board') v.innerHTML = filterBar() + sleepStrip() + board();
+  if(view==='list') v.innerHTML = filterBar() + list();
+  if(view==='rules') v.innerHTML = rulesView();
+  if(view==='clean') v.innerHTML = cleanView();
+  bindDnD();
+}
+function sleepStrip(){
+  const s = tops().filter(isSleeping).sort((a,b)=>days(lastUpd(b))-days(lastUpd(a)));
+  if(!s.length) return '';
+  return `<div class="sleep"><h3>💤 진행 중인데 오래 손 안 댄 앱 <span style="font-weight:400;color:var(--sub);font-size:12px">— 눌러서 이어가거나 '멈춤'으로 옮기세요</span></h3>
+    <div class="items">${s.map(a => `<span class="it" data-act="open" data-id="${a.id}">${esc(a.name)}<em>${days(lastUpd(a))}일</em></span>`).join('')}</div></div>`;
+}
+function cardHTML(a){
+  const old = isSleeping(a);
+  const fit = rules.filter(r => ruleFits(r,a));
+  return `<div class="card" draggable="true" data-act="open" data-id="${a.id}">
+    <div class="t">${a.isNew?'<span class="newb">NEW</span>':''}${esc(a.name)}</div>
+    <div class="meta">
+      <span class="cat">${esc(a.cat)}</span>
+      <span class="age ${old?'old':''}">${old?'💤 ':''}${ageTxt(lastUpd(a))}</span>
+      ${(a.links||[]).length ? `<span>🔗${a.links.length}</span>` : ''}
+      ${a.github ? `<span class="svc" title="GitHub">${ICON_GH}</span>` : ''}
+      ${a.netlify ? `<span class="svc web" title="Netlify 배포">${ICON_WEB}</span>` : ''}
+      ${a.visits ? `<span class="vis" title="최근 ${a.visits.days}일 접속 기기 수 (${esc(a.visits.at)} 기준)">👁 ${a.visits.ips}</span>` : ''}
+      ${fit.length ? `<span class="rdots" title="공통 규칙 적용">${fit.map(r=>`<s class="${a.rules&&a.rules[r.id]?'on':''}"></s>`).join('')}</span>` : ''}
+    </div>
+    ${kidsOf(a).length ? `<div class="kids">${kidsOf(a).map(k => `<span class="kid" data-act="open" data-id="${k.id}"><i style="background:${ST[k.status].c}"></i>${esc(k.name)}<em>${ageTxt(k.updated)}</em></span>`).join('')}</div>` : ''}
+    ${a.next ? `<div class="nx">▸ ${esc(a.next)}</div>` : ''}
+  </div>`;
+}
+function board(){
+  const list = filtered();
+  return `<div class="board">${ORDER.map(s => {
+    const items = list.filter(a => a.status===s).sort((x,y) => lastUpd(y).localeCompare(lastUpd(x)));
+    return `<div class="col" data-col="${s}"><div class="colh"><i style="background:${ST[s].c}"></i>${ST[s].l}<span class="n">${items.length}</span></div>
+      ${items.map(cardHTML).join('') || `<div class="empty" style="padding:16px;font-size:12px">여기로 끌어다 놓기</div>`}</div>`;
+  }).join('')}</div>`;
+}
+function rowHTML(a, sub){ const m = mainLink(a); return `<tr class="r${sub?' sub':''}" data-act="open" data-id="${a.id}">
+      <td>${sub?'<span class="subm">└</span>':''}<b>${esc(a.name)}</b>${!sub&&kidsOf(a).length?`<span class="kidn">하위 ${kidsOf(a).length}</span>`:''}${(a.tags||[]).length?`<div style="font-size:11px;color:var(--sub)">${a.tags.map(esc).join(' · ')}</div>`:''}</td>
+      <td><span class="st"><i style="background:${ST[a.status].c}"></i>${ST[a.status].l}</span></td>
+      <td><span class="cat">${esc(a.cat)}</span></td>
+      <td class="age ${isSleeping(a)?'old':''}">${ageTxt(sub?a.updated:lastUpd(a))}</td>
+      <td class="mono">${(a.links||[]).length}</td>
+      <td>${a.github ? `<a class="ext" href="${esc(fullUrl(a.github))}" target="_blank" rel="noopener" data-stop="1">${ICON_GH} ${esc(shortUrl(a.github))}</a>` : '<span style="color:#bbb">—</span>'}</td>
+      <td>${a.netlify ? `<a class="ext web" href="${esc(fullUrl(a.netlify))}" target="_blank" rel="noopener" data-stop="1">${ICON_WEB} ${esc(shortUrl(a.netlify))}</a>` : '<span style="color:#bbb">—</span>'}</td>
+      <td class="mono">${a.visits ? `${a.visits.ips}<span style="color:var(--sub);font-size:11px"> 기기 · ${a.visits.reqs}회</span>` : '<span style="color:#bbb">—</span>'}</td>
+      <td style="color:var(--sub);max-width:280px">${esc(a.next||'')}</td>
+      <td>${m?`<a class="btn ghost sm" href="${esc(m.url)}" target="_blank" rel="noopener" data-stop="1">열기</a>`:''}</td>
+    </tr>`; }
+function list(){
+  const L = filtered().slice();
+  const k = sortBy.k, d = sortBy.dir;
+  L.sort((a,b) => {
+    let x = a[k]||'', y = b[k]||'';
+    if(k==='status'){ x = ORDER.indexOf(a.status); y = ORDER.indexOf(b.status); }
+    if(k==='links'){ x = (a.links||[]).length; y = (b.links||[]).length; }
+    if(k==='updated'){ x = lastUpd(a); y = lastUpd(b); }
+    if(k==='visits'){ x = a.visits?a.visits.ips:-1; y = b.visits?b.visits.ips:-1; }
+    return (x>y?1:x<y?-1:0) * d;
+  });
+  const th = (key,l) => `<th data-act="sort" data-k="${key}">${l}${sortBy.k===key?(sortBy.dir>0?' ↑':' ↓'):''}</th>`;
+  if(!L.length) return `<div class="empty">조건에 맞는 앱이 없어요.</div>`;
+  return `<div class="tblwrap"><table><thead><tr>${th('name','앱')}${th('status','상태')}${th('cat','분류')}${th('updated','마지막 작업')}${th('links','아티팩트')}${th('github','GitHub')}${th('netlify','배포 사이트')}${th('visits','방문 (7일)')}<th>다음 할 일</th><th></th></tr></thead><tbody>
+    ${L.map(a => rowHTML(a,false) + kidsOf(a).map(k=>rowHTML(k,true)).join('')).join('')}</tbody></table></div>`;
+}
+function rulesView(){
+  const live = apps.filter(a => a.status!=='trash');
+  const cards = rules.map(r => {
+    const elig = live.filter(a => ruleFits(r,a));
+    const on = elig.filter(a => a.rules && a.rules[r.id]);
+    const miss = elig.filter(a => !(a.rules && a.rules[r.id]));
+    const pct = elig.length ? Math.round(on.length/elig.length*100) : 0;
+    return `<div class="rule">
+      <h3>${esc(r.name)} <span class="scope">${r.scope==='game'?'게임만':'전체 앱'}</span></h3>
+      <p>${esc(r.desc)}</p>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span>적용 ${on.length} / ${elig.length}</span><span class="mono">${pct}%</span></div>
+      <div class="bar"><b style="width:${pct}%"></b></div>
+      ${miss.length ? `<div class="miss">${miss.slice(0,14).map(a=>`<span>${esc(a.name)}</span>`).join('')}${miss.length>14?`<span>+${miss.length-14}</span>`:''}</div>` : `<div class="miss"><span style="background:#e3f4ec;color:var(--active)">모두 적용됨 ✓</span></div>`}
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="btn sm" data-act="rule-req" data-id="${r.id}" ${miss.length?'':'disabled'}>미적용 ${miss.length}개 적용 요청 복사</button>
+        <button class="btn ghost sm" data-act="rule-edit" data-id="${r.id}">편집</button>
+      </div>
+    </div>`;
+  }).join('');
+  const matrix = rules.length && live.length ? `<div class="tblwrap"><table class="matrix"><thead><tr><th>앱</th>${rules.map(r=>`<th class="rc">${esc(r.name)}</th>`).join('')}</tr></thead><tbody>
+    ${live.sort((a,b)=>a.cat.localeCompare(b.cat)||a.name.localeCompare(b.name)).map(a => `<tr><td><span class="cat">${esc(a.cat)}</span> ${esc(a.name)}</td>${rules.map(r => ruleFits(r,a)
+      ? `<td class="c"><input type="checkbox" data-act="mx" data-a="${a.id}" data-r="${r.id}" ${a.rules&&a.rules[r.id]?'checked':''}></td>`
+      : `<td class="na">–</td>`).join('')}</tr>`).join('')}
+  </tbody></table></div>` : '';
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap">
+      <p style="margin:0;color:var(--sub);font-size:13px">모든 앱에 똑같이 들어가야 하는 것들. 미적용 앱 목록을 요청문으로 복사해 Claude에게 붙여넣으면 한꺼번에 적용해요.</p>
+      <button class="btn" data-act="rule-new">+ 규칙 추가</button></div>
+    <div class="rules">${cards || '<div class="empty">아직 공통 규칙이 없어요.</div>'}</div>
+    ${matrix ? `<h3 style="font-size:15px;margin:0 0 8px">적용 현황표</h3>${matrix}` : ''}`;
+}
+function cleanView(){
+  const trashApps = apps.filter(a => a.status==='trash');
+  const flagged = [];
+  apps.forEach(a => (a.links||[]).forEach(l => { if(l.del && a.status!=='trash') flagged.push({a,l}); }));
+  const drafts = [];
+  apps.filter(a => a.status!=='trash').forEach(a => (a.links||[]).forEach(l => { if(l.kind!=='main' && l.kind!=='doc') drafts.push({a,l}); }));
+  drafts.sort((x,y) => (x.a.updated||'').localeCompare(y.a.updated||''));
+  const lrow = ({a,l}, showApp=true) => `<div class="lrow"><span class="kind ${l.kind}">${KINDS[l.kind]||'기타'}</span>
+      <a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>
+      ${showApp?`<span class="app">${esc(a.name)}</span>`:''}
+      <button class="flag ${l.del?'on':''}" data-act="flag" data-a="${a.id}" data-l="${l.id}">${l.del?'삭제 표시됨':'삭제 표시'}</button></div>`;
+  const total = trashApps.reduce((n,a)=>n+(a.links||[]).length,0) + flagged.length;
+  return `<div class="sec" style="background:var(--ink);color:#fff;border-color:var(--ink);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div><h3>지울 아티팩트 ${total}개</h3><p class="d" style="color:#bbb;margin:0">이 페이지는 다른 아티팩트를 직접 지울 수 없어요. 요청문을 복사해 Claude 채팅에 붙여넣으면, 하나씩 확인받고 지운 뒤 여기 목록도 정리해요.</p></div>
+      <button class="btn" style="background:#fff;color:var(--ink);border-color:#fff" data-act="del-req" ${total?'':'disabled'}>삭제 요청 복사</button></div>
+    <div class="sec"><h3>🗑 삭제 예정 앱 (${trashApps.length})</h3><p class="d">상태를 '삭제 예정'으로 바꾼 앱. 딸린 아티팩트가 모두 삭제 대상이에요.</p>
+      ${trashApps.map(a => `<div style="margin-bottom:8px"><b style="cursor:pointer" data-act="open" data-id="${a.id}">${esc(a.name)}</b>
+        ${(a.links||[]).map(l=>`<div class="lrow"><span class="kind ${l.kind}">${KINDS[l.kind]||'기타'}</span><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a></div>`).join('') || '<div class="lrow" style="color:var(--sub)">연결된 아티팩트 없음 — 관리실에서만 빼면 돼요</div>'}</div>`).join('') || '<div class="empty" style="padding:10px">없음</div>'}</div>
+    <div class="sec"><h3>🚩 삭제 표시한 아티팩트 (${flagged.length})</h3><p class="d">앱은 남기고 이 링크만 지워요.</p>
+      ${flagged.map(x=>lrow(x)).join('') || '<div class="empty" style="padding:10px">없음</div>'}</div>
+    <div class="sec"><h3>🧹 정리 후보: 시안·디자인 (${drafts.length})</h3><p class="d">본 앱으로 이미 옮겨진 시안은 지워도 될 수 있어요. 오래된 것부터 보여요.</p>
+      ${drafts.map(x=>lrow(x)).join('') || '<div class="empty" style="padding:10px">없음</div>'}</div>`;
+}
+function renderChecker(){
+  const q = $('#chkIn').value.trim();
+  const out = $('#chkOut');
+  if(!q){ out.innerHTML = ''; return; }
+  const s = similar(q);
+  out.innerHTML = s.length
+    ? `<div class="simnote">이미 비슷한 앱이 ${s.length}개 있어요. 새로 만들기보다 이어서 하는 건 어떨까요?</div><div class="simlist">${s.map(({a,score}) =>
+        `<div class="sim" data-act="open" data-id="${a.id}"><span class="pct ${score>=.6?'hi':''}">${Math.round(score*100)}%</span><span>${esc(a.name)}</span><span class="st" style="color:#ccc"><i style="background:${ST[a.status].c}"></i>${ST[a.status].l}</span></div>`).join('')}</div>`
+    : `<div class="simnote">✓ 비슷한 앱이 없어요. 새로 만들어도 좋아요.</div>`;
+}
+
+/* ---------- drawer ---------- */
+function openApp(id){ const _a = apps.find(x=>x.id===id); if(_a && _a.isNew){ _a.isNew = false; save('apps'); setTimeout(()=>{ renderView(); }, 0); } openId = id; renderDrawer(); $('#drawer').classList.add('on'); $('#scrim').classList.add('on'); }
+function closeApp(){ openId = null; $('#drawer').classList.remove('on'); $('#scrim').classList.remove('on'); }
+function renderDrawer(){
+  const a = apps.find(x => x.id===openId);
+  if(!a){ closeApp(); return; }
+  const fit = rules.filter(r => ruleFits(r,a));
+  const dup = dupesOf(a);
+  const focused = document.activeElement && document.activeElement.closest('#drawer') ? document.activeElement.dataset.f : null;
+  $('#drawer').innerHTML = `
+    <div class="dh"><input data-f="name" value="${esc(a.name)}" ${readOnly?'disabled':''}><button class="x" data-act="close">✕</button></div>
+    <div class="dbody">
+      <div class="fld"><label>상태</label><div class="seg">${ORDER.map(s => `<button class="${a.status===s?'on':''}" style="${a.status===s?`background:${ST[s].c};border-color:${ST[s].c}`:''}" data-act="set-st" data-st="${s}"><i style="background:${a.status===s?'#fff':ST[s].c}"></i>${ST[s].l}</button>`).join('')}</div></div>
+      <div class="two">
+        <div class="fld"><label>분류</label><select data-f="cat">${CATS.map(c=>`<option ${a.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="fld"><label>상위 앱 — 다른 앱 아래로 묶기</label>${kidsOf(a).length ? `<select disabled><option>이 앱이 상위 앱이에요</option></select>` : `<select data-f="parent"><option value="">(없음 — 독립 앱)</option>${tops().filter(p=>p.id!==a.id).sort((x,y)=>x.name.localeCompare(y.name)).map(p=>`<option value="${p.id}" ${a.parent===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`}</div>
+        <div class="fld"><label>마지막 작업일 <a href="#" data-act="today" style="font-weight:400;margin-left:4px">오늘로</a></label><input type="date" data-f="updated" value="${esc(a.updated||'')}"></div>
+      </div>
+      ${parentOf(a) ? `<div class="fld"><label>상위 앱</label><button class="chip" data-act="open" data-id="${parentOf(a).id}">↑ ${esc(parentOf(a).name)}</button></div>` : ''}
+      ${kidsOf(a).length ? `<div class="fld"><label>하위 앱 (${kidsOf(a).length})</label><div style="display:flex;gap:5px;flex-wrap:wrap">${kidsOf(a).map(k=>`<button class="chip" data-act="open" data-id="${k.id}"><span class="st"><i style="background:${ST[k.status].c}"></i></span> ${esc(k.name)}</button>`).join('')}</div></div>` : ''}
+      <div class="fld"><label>어떤 앱인가요</label><textarea data-f="desc" rows="2">${esc(a.desc||'')}</textarea></div>
+      <div class="fld"><label>다음 할 일 — 다시 열었을 때 바로 이어갈 수 있게</label><textarea data-f="next" rows="2" placeholder="예: 코스 3 디자인 확정, 모바일 조작 테스트">${esc(a.next||'')}</textarea></div>
+      <div class="fld"><label>${ICON_GH} GitHub 저장소</label>
+        <div class="urlrow"><input type="text" data-f="github" value="${esc(a.github||'')}" placeholder="https://github.com/kwonjisung/…">${a.github?`<a class="btn ghost sm" href="${esc(fullUrl(a.github))}" target="_blank" rel="noopener">열기 ↗</a>`:''}</div></div>
+      <div class="fld"><label>${ICON_WEB} Netlify 배포 주소</label>
+        <div class="urlrow"><input type="text" data-f="netlify" value="${esc(a.netlify||'')}" placeholder="https://이름.netlify.app">${a.netlify?`<a class="btn ghost sm" href="${esc(fullUrl(a.netlify))}" target="_blank" rel="noopener">사이트 ↗</a>`:''}${netlifyName(a.netlify)?`<a class="btn ghost sm" href="https://app.netlify.com/projects/${esc(netlifyName(a.netlify))}" target="_blank" rel="noopener" title="Netlify 관리 화면 — 방문자 통계는 Analytics 메뉴">관리 ↗</a>`:''}</div></div>
+      ${a.visits ? `<div class="fld"><label>👁 방문 기록 (Netlify)</label><div class="visbox"><div><b class="mono">${a.visits.ips}</b><span>접속 기기(IP)</span></div><div><b class="mono">${a.visits.reqs}</b><span>요청 수</span></div><div><b class="mono">${a.visits.days}일</b><span>${esc(a.visits.at)} 기준</span></div></div>${a.visits.note?`<div style="font-size:12px;color:var(--sub);margin-top:5px">${esc(a.visits.note)}</div>`:''}</div>` : ''}
+      <div class="fld"><label>태그 (쉼표로 구분 — 중복 확인에 쓰여요)</label><input type="text" data-f="tags" value="${esc((a.tags||[]).join(', '))}"></div>
+      ${dup.length ? `<div class="fld"><label>⚠ 비슷한 앱</label><div style="display:flex;gap:5px;flex-wrap:wrap">${dup.map(({a:b,score})=>`<button class="chip" data-act="open" data-id="${b.id}">${esc(b.name)} · ${Math.round(score*100)}%</button>`).join('')}</div></div>` : ''}
+      <div class="fld"><label>아티팩트 (${(a.links||[]).length})</label>
+        ${(a.links||[]).map(l => `<div class="lrow"><span class="kind ${l.kind}">${KINDS[l.kind]||'기타'}</span><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>
+          <button class="flag ${l.del?'on':''}" data-act="flag" data-a="${a.id}" data-l="${l.id}">${l.del?'삭제 표시됨':'삭제 표시'}</button>
+          <button class="x" style="font-size:14px" data-act="unlink" data-l="${l.id}" title="관리실 목록에서만 빼기">✕</button></div>`).join('') || '<div style="color:var(--sub);font-size:13px">연결된 아티팩트가 없어요.</div>'}
+        <div class="addl"><input id="nlT" placeholder="이름"><input id="nlU" placeholder="https://claude.ai/artifact/…"><select id="nlK">${Object.entries(KINDS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button class="btn sm" data-act="add-link">추가</button></div>
+      </div>
+      ${fit.length ? `<div class="fld"><label>공통 규칙</label>${fit.map(r => `<label class="rchk"><input type="checkbox" data-act="rchk" data-r="${r.id}" ${a.rules&&a.rules[r.id]?'checked':''}><span>${esc(r.name)}<small>${esc(r.desc)}</small></span></label>`).join('')}</div>` : ''}
+      <div class="fld"><label>메모</label><textarea data-f="memo" rows="3">${esc(a.memo||'')}</textarea></div>
+    </div>
+    <div class="dfoot">
+      <button class="btn" data-act="continue">이어서 작업 요청 복사</button>
+      ${mainLink(a) ? `<a class="btn ghost" href="${esc(mainLink(a).url)}" target="_blank" rel="noopener">앱 열기 ↗</a>` : ''}
+      ${a.netlify ? `<a class="btn ghost" href="${esc(fullUrl(a.netlify))}" target="_blank" rel="noopener">${ICON_WEB} 사이트</a>` : ''}
+      ${a.github ? `<a class="btn ghost" href="${esc(fullUrl(a.github))}" target="_blank" rel="noopener">${ICON_GH} GitHub</a>` : ''}
+      <button class="btn ghost" style="margin-left:auto;color:var(--trash)" data-act="remove-app">관리실에서 빼기</button>
+    </div>`;
+  if(focused){ const el = $('#drawer [data-f="'+focused+'"]'); if(el){ el.focus(); if(el.setSelectionRange && el.type!=='date'){ const n = el.value.length; try{el.setSelectionRange(n,n);}catch(e){} } } }
+}
+
+
+/* ---------- version ---------- */
+const VERSION = 'v1.5';
+const CHANGELOG = [
+  {v:'v1.5', d:'2026-11-16', t:'새 앱 자동 발견', items:['Claude가 아티팩트·GitHub·Netlify를 훑어 발견 목록을 남기면(채팅에서 "앱 관리실 스캔해줘"), 페이지가 열릴 때 알아서 배치','이름이나 설명이 기존 앱과 맞으면 그 앱에 붙이고, 아니면 NEW 표시와 함께 새 앱으로 추가','아티팩트·GitHub가 갱신되면 마지막 작업일도 자동으로 맞춤','🔄 새로고침: Netlify에서 새 사이트와 7일 방문 수를 바로 가져옴','\'새로 들어온 것\' 목록에서 잘못 배치된 건 되돌리기 — 다음 스캔에서도 다시 안 넣음']},
+  {v:'v1.4', d:'2026-11-15', t:'버전 표시와 작동 원리', items:['제목 옆 버전 번호 — 누르면 업데이트 기록·작동 원리·내부 흐름을 보여줘요','업데이트할 때마다 버전을 올리고 이 기록에 남겨요']},
+  {v:'v1.3', d:'2026-11-15', t:'하위 앱 묶기', items:['앱을 다른 앱 아래로 묶는 \'상위 앱\' 기능','English Daily·Japanese Daily를 스터디룸 아래로 정리','상위 앱의 마지막 작업일은 하위 앱까지 포함해서 계산']},
+  {v:'v1.2', d:'2026-11-15', t:'Netlify 방문 기록', items:['Netlify에서 배포 주소 9개를 찾아 연결','최근 7일 접속 기기·요청 수를 카드·목록·상세에 표시','\'방문자 새로고침 요청\' 버튼','어떤 앱인지 모르는 Netlify 사이트 3개를 \'확인 필요\'로 분리']},
+  {v:'v1.1', d:'2026-11-15', t:'GitHub·Netlify 주소', items:['앱마다 GitHub 저장소·Netlify 배포 주소 칸','GitHub 저장소 11개 연결, 넣으면 \'GitHub 백업\' 규칙 자동 체크','목록에 GitHub·배포 사이트 열 추가']},
+  {v:'v1.0', d:'2026-11-15', t:'첫 버전', items:['아티팩트 51개를 앱 29개로 묶어서 등록','보드(상태별 칸, 끌어서 옮기기)·전체 목록·공통 규칙·정리함','새로 만들기 전 비슷한 앱 확인, 14일 넘게 멈춘 \'잠든 앱\' 알림','Claude에게 보낼 요청문 복사(이어서 작업·규칙 적용·삭제·동기화)']}
+];
+function dgBox(x,y,w,h,title,sub,fill,stroke){
+  return `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="${fill||'#fff'}" stroke="${stroke||'#d8d1c1'}" stroke-width="1.5"/>
+    <text x="${x+w/2}" y="${y+(sub?h/2-4:h/2+5)}" text-anchor="middle" font-size="14" font-weight="700" fill="#1d1c1a">${title}</text>
+    ${sub?`<text x="${x+w/2}" y="${y+h/2+14}" text-anchor="middle" font-size="11.5" fill="#6b675f">${sub}</text>`:''}</g>`;
+}
+function dgArrow(x1,y1,x2,y2,label,color,dash){
+  const mx=(x1+x2)/2, my=(y1+y2)/2;
+  return `<g><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color||'#8f897c'}" stroke-width="1.8" ${dash?'stroke-dasharray="5 4"':''} marker-end="url(#ah)"/>
+    ${label?(x1===x2 ? `<text x="${x1+9}" y="${my+4}" text-anchor="start" font-size="11" fill="${color||'#6b675f'}" font-weight="600">${label}</text>`
+      : y1!==y2 ? `<text x="${mx+12}" y="${my+4}" text-anchor="start" font-size="11" fill="${color||'#6b675f'}" font-weight="600">${label}</text>`
+      : `<text x="${mx}" y="${my-7}" text-anchor="middle" font-size="11" fill="${color||'#6b675f'}" font-weight="600">${label}</text>`):''}</g>`;
+}
+const DG_DEFS = `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8f897c"/></marker></defs>`;
+function diagramSystem(){
+  return `<svg class="dg" viewBox="0 0 860 400" xmlns="http://www.w3.org/2000/svg">${DG_DEFS}
+    ${dgBox(30,40,150,64,'나','폰·PC 브라우저','#fff')}
+    ${dgBox(300,30,260,84,'앱 관리실 페이지','claude.ai 아티팩트 · 보기/편집','#eef6ff','#9cc0ea')}
+    ${dgBox(680,40,150,64,'저장소','manager/apps · rules','#e3f4ec','#8ccbb0')}
+    ${dgBox(300,250,260,84,'Claude 채팅','요청문을 붙여넣으면 실행','#f3efff','#b8adf0')}
+    ${dgBox(30,250,150,64,'아티팩트들','앱·시안·문서 51개','#fff')}
+    ${dgBox(680,220,150,52,'Netlify','배포 주소·방문 기록','#e6f6f5','#8fd0cb')}
+    ${dgBox(680,290,150,52,'GitHub','저장소 11개','#f1f0ee')}
+    ${dgArrow(180,72,298,72,'보고 고치기')}
+    ${dgArrow(562,60,678,60,'0.5초 모아 저장','#1f9d6b')}
+    ${dgArrow(678,88,562,88,'실시간 반영','#2f6fdb')}
+    ${dgArrow(430,116,430,248,'요청문 복사 → 붙여넣기','#7a6ff0')}
+    ${dgArrow(298,292,182,292,'목록 확인·삭제·수정')}
+    ${dgArrow(562,268,678,248,'')}
+    ${dgArrow(562,306,678,314,'')}
+    ${dgArrow(540,248,700,106,'정리 결과 기록','#1f9d6b',true)}
+    <text x="430" y="380" text-anchor="middle" font-size="12" fill="#6b675f">페이지는 다른 아티팩트를 직접 못 고쳐요 — 실제 삭제·적용·조회는 Claude가 하고, 결과를 저장소에 남겨요</text>
+  </svg>`;
+}
+function diagramInner(){
+  return `<svg class="dg" viewBox="0 0 860 430" xmlns="http://www.w3.org/2000/svg">${DG_DEFS}
+    ${dgBox(30,30,170,60,'① 저장소 구독','onSnapshot','#e3f4ec','#8ccbb0')}
+    ${dgBox(250,30,170,60,'② 상태','apps[] · rules[]','#fff')}
+    ${dgBox(470,30,170,60,'③ 계산','하위·잠든·중복','#fff8ec','#e7c48b')}
+    ${dgBox(690,30,150,60,'④ 그리기','render()','#eef6ff','#9cc0ea')}
+    ${dgArrow(200,60,248,60,'')}${dgArrow(420,60,468,60,'')}${dgArrow(640,60,688,60,'')}
+    ${dgBox(690,150,150,60,'⑤ 내가 편집','상태·메모·체크','#fff')}
+    ${dgArrow(765,92,765,148,'')}
+    ${dgBox(470,150,170,60,'⑥ upd()','상태를 바로 바꿈','#fff')}
+    ${dgArrow(688,180,642,180,'')}
+    ${dgBox(250,150,170,60,'⑦ save()','0.5초 동안 모으기','#fff')}
+    ${dgArrow(468,180,422,180,'')}
+    ${dgBox(30,150,170,60,'⑧ flush()','한 번에 하나씩 저장','#e3f4ec','#8ccbb0')}
+    ${dgArrow(248,180,202,180,'')}
+    ${dgArrow(115,148,115,92,'다른 기기에도','#2f6fdb')}
+    ${dgArrow(555,148,555,92,'즉시 다시 그림','#8f897c',true)}
+    <line x1="30" y1="250" x2="830" y2="250" stroke="#e2ddd1"/>
+    <text x="30" y="278" font-size="13" font-weight="700" fill="#1d1c1a">③ 계산이 하는 일</text>
+    ${dgBox(30,295,250,110,'비슷한 앱 찾기','글자를 2개씩 쪼개 겹치는 비율','#fff')}
+    <text x="155" y="385" text-anchor="middle" font-size="11" fill="#6b675f">"레이싱 게임" → 레이·이싱·게임</text>
+    ${dgBox(305,295,250,110,'잠든 앱','진행 중 + 14일 넘게 손 안 댐','#fff')}
+    <text x="430" y="385" text-anchor="middle" font-size="11" fill="#6b675f">하위 앱 작업일까지 포함</text>
+    ${dgBox(580,295,250,110,'하위 앱 묶기','parent 칸이 가리키는 앱 아래로','#fff')}
+    <text x="705" y="385" text-anchor="middle" font-size="11" fill="#6b675f">상위 앱이 지워지면 자동으로 독립</text>
+  </svg>`;
+}
+function verPanel(tab){
+  const tabs = [['log','업데이트 기록'],['how','작동 원리'],['flow','내부 흐름']];
+  let body = '';
+  if(tab==='log'){
+    body = `<div class="vlog">${CHANGELOG.map((c,i)=>`<div class="e ${i===0?'cur':''}"><b>${c.v}</b><span class="tt">${esc(c.t)}</span><span class="dt">${c.d}</span><ul>${c.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`;
+  } else if(tab==='how'){
+    body = `<div class="vsec"><p>앱 관리실은 <b>보고 정리하는 화면</b>이고, 실제 일(아티팩트 삭제·규칙 적용·Netlify 조회)은 <b>Claude</b>가 해요. 둘은 같은 저장소를 같이 봐요.</p>
+      ${diagramSystem()}
+      <div class="vgrid">
+        <div class="vcard"><b>📦 저장소</b>앱 목록은 <code>manager/apps</code>, 공통 규칙은 <code>manager/rules</code> 문서 두 개에 저장돼요. 어느 기기에서 열어도 같고, 수정은 나만 할 수 있어요.</div>
+        <div class="vcard"><b>📋 요청문 복사</b>이 페이지는 다른 아티팩트를 직접 못 고쳐요. 그래서 할 일을 요청문으로 만들어 주고, 채팅에 붙여넣으면 Claude가 처리해요.</div>
+        <div class="vcard"><b>🌐 Netlify·GitHub</b>Claude가 Netlify 연결로 배포 주소와 최근 7일 방문 기록을, GitHub에서 저장소 목록을 가져와 저장소에 적어요.</div>
+        <div class="vcard"><b>🔎 자동 발견</b>페이지는 다른 아티팩트 목록을 직접 읽을 수 없어요. 그래서 채팅에서 요청하면 Claude가 훑어 <code>manager/scan</code>에 남기고, 페이지는 열릴 때 처음 보는 것만 골라 배치해요. 이미 본 것·되돌린 것은 <code>manager/seen</code>에 기억해요. Netlify는 새로고침 버튼으로 페이지가 직접 물어봐요.</div>
+        <div class="vcard"><b>🔄 실시간 반영</b>Claude가 저장소를 고치면 열려 있는 페이지에 바로 나타나요. 새로고침할 필요가 없어요.</div>
+      </div></div>`;
+  } else {
+    body = `<div class="vsec"><p>페이지가 열리면 저장소를 구독하고, 데이터가 오면 계산해서 그려요. 고치면 바로 화면에 반영하고, 0.5초 동안 모았다가 한 번에 저장해요.</p>
+      ${diagramInner()}
+      <h4>앱 하나에 담긴 정보</h4>
+      <div class="vgrid">
+        <div class="vcard"><b>기본</b><code>name</code> 이름 · <code>cat</code> 분류 · <code>status</code> 상태 · <code>updated</code> 마지막 작업일</div>
+        <div class="vcard"><b>정리용</b><code>desc</code> 설명 · <code>next</code> 다음 할 일 · <code>memo</code> · <code>tags</code> 태그 · <code>parent</code> 상위 앱</div>
+        <div class="vcard"><b>연결</b><code>links[]</code> 본 앱·시안·문서 · <code>github</code> · <code>netlify</code> · <code>visits</code> 방문 기록</div>
+        <div class="vcard"><b>규칙</b><code>rules{}</code> 공통 규칙별 적용 여부 — 규칙은 '전체 앱' 또는 '게임만'에 적용</div>
+      </div>
+      <h4>버전 관리 방식</h4>
+      <p>기능을 바꿀 때마다 버전을 한 단계 올리고 이 기록에 무엇이 바뀌었는지 남겨요. 페이지 자체도 claude.ai에 버전별로 저장돼서 이전 버전으로 되돌릴 수 있어요. 앱 데이터(저장소)는 페이지 버전과 따로 보관돼서, 페이지를 업데이트해도 정리한 내용은 그대로예요.</p>
+    </div>`;
+  }
+  modal(`<div class="vh"><h3>앱 관리실</h3><span class="vnum">${VERSION}</span><button class="x" style="margin-left:auto" data-act="modal-close">✕</button></div>
+    <div class="vtabs">${tabs.map(([k,l])=>`<button class="tab ${tab===k?'on':''}" data-act="vtab" data-t="${k}">${l}</button>`).join('')}</div>
+    <div class="vbody">${body}</div>`, true);
+}
+
+/* ---------- actions ---------- */
+function upd(id, fn){ const a = apps.find(x=>x.id===id); if(!a) return; fn(a); save('apps'); }
+function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(()=>el.classList.remove('on'), 2400); }
+function modal(html, wide){ $('#mbox').innerHTML = html; $('#mbox').classList.toggle('wide', !!wide); $('#modal').classList.add('on'); }
+function closeModal(){ $('#modal').classList.remove('on'); }
+async function copyOut(text, title){
+  let ok = false;
+  try{ await navigator.clipboard.writeText(text); ok = true; }catch(e){}
+  if(ok){ toast('복사됐어요 — Claude 채팅에 붙여넣으세요'); return; }
+  modal(`<h3>${esc(title||'요청문')}</h3><p>아래 내용을 복사해서 Claude 채팅에 붙여넣으세요.</p><textarea id="cpTa" readonly>${esc(text)}</textarea><div class="acts"><button class="btn" data-act="modal-close">닫기</button></div>`);
+  setTimeout(()=>{ const t = $('#cpTa'); if(t){ t.focus(); t.select(); } }, 30);
+}
+function newApp(name){
+  if(readOnly) return;
+  const a = {id:uid(), name:name||'새 앱', cat:'아이디어', status:'idea', desc:'', next:'', memo:'', tags:[], updated:todayStr(), links:[], rules:{}};
+  apps.unshift(a); save('apps'); render(); openApp(a.id);
+}
+function ruleEditor(r){
+  const isNew = !r; r = r || {id:uid(), name:'', desc:'', scope:'all'};
+  modal(`<h3>${isNew?'공통 규칙 추가':'규칙 편집'}</h3><p>모든 앱(또는 게임)에 똑같이 들어가야 하는 기능·원칙.</p>
+    <div class="fld"><label>이름</label><input type="text" id="rN" value="${esc(r.name)}" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:8px 10px"></div>
+    <div class="fld"><label>설명 — Claude가 그대로 적용할 수 있게 구체적으로</label><textarea id="rD" style="height:90px">${esc(r.desc)}</textarea></div>
+    <div class="fld"><label>적용 범위</label><select id="rS" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:8px 10px"><option value="all" ${r.scope==='all'?'selected':''}>전체 앱</option><option value="game" ${r.scope==='game'?'selected':''}>게임만</option></select></div>
+    <div class="acts">${isNew?'':`<button class="btn ghost" style="color:var(--trash);margin-right:auto" data-act="rule-del" data-id="${r.id}">삭제</button>`}<button class="btn ghost" data-act="modal-close">취소</button><button class="btn" data-act="rule-save" data-id="${r.id}" data-new="${isNew?1:0}">저장</button></div>`);
+}
+
+document.addEventListener('click', e => {
+  const stop = e.target.closest('[data-stop]'); if(stop) return;
+  const el = e.target.closest('[data-act]'); if(!el) return;
+  const act = el.dataset.act, id = el.dataset.id;
+  if(act==='tab'){ view = el.dataset.v; try{ history.replaceState(null,'','#'+view); }catch(_){} render(); }
+  else if(act==='stat'){ filt.st = el.dataset.st || null; filt.cat='전체'; if(view!=='board' && view!=='list') view='board'; render(); }
+  else if(act==='clear-st'){ filt.st = null; render(); }
+  else if(act==='cat'){ filt.cat = el.dataset.c; render(); }
+  else if(act==='sort'){ const k = el.dataset.k; sortBy = {k, dir: sortBy.k===k ? -sortBy.dir : (k==='updated'?-1:1)}; render(); }
+  else if(act==='open'){ e.preventDefault(); openApp(id); }
+  else if(act==='close'){ closeApp(); }
+  else if(act==='new-app'){ newApp(''); }
+  else if(act==='chk-add'){ const q = $('#chkIn').value.trim(); if(!q){ $('#chkIn').focus(); return; } newApp(q); $('#chkIn').value=''; renderChecker(); }
+  else if(act==='set-st'){ upd(openId, a => a.status = el.dataset.st); render(); }
+  else if(act==='today'){ e.preventDefault(); upd(openId, a => a.updated = todayStr()); render(); }
+  else if(act==='flag'){ upd(el.dataset.a, a => { const l = a.links.find(x=>x.id===el.dataset.l); if(l) l.del = !l.del; }); render(); }
+  else if(act==='unlink'){ upd(openId, a => a.links = a.links.filter(x=>x.id!==el.dataset.l)); render(); }
+  else if(act==='add-link'){
+    const t = $('#nlT').value.trim(), u = $('#nlU').value.trim(), k = $('#nlK').value;
+    if(!/^https?:\/\//.test(u)){ toast('링크 주소를 확인해 주세요'); return; }
+    upd(openId, a => { a.links = a.links||[]; a.links.push({id:uid(), title:t||u, url:u, kind:k, del:false}); }); render();
+  }
+  else if(act==='continue'){
+    const a = apps.find(x=>x.id===openId); const m = mainLink(a);
+    copyOut(`"${a.name}" 이어서 작업하자.\n${m?'링크: '+m.url+'\n':''}${a.github?'GitHub: '+fullUrl(a.github)+'\n':''}${a.netlify?'배포: '+fullUrl(a.netlify)+'\n':''}${a.desc?'설명: '+a.desc+'\n':''}${a.next?'다음 할 일: '+a.next+'\n':''}${a.memo?'메모: '+a.memo+'\n':''}`, '이어서 작업 요청');
+  }
+  else if(act==='remove-app'){
+    const a = apps.find(x=>x.id===openId);
+    modal(`<h3>"${esc(a.name)}"를 관리실에서 뺄까요?</h3><p>관리실 목록에서만 지워져요. 실제 아티팩트를 지우려면 상태를 '삭제 예정'으로 바꾸고 정리함에서 삭제 요청을 보내세요.</p>
+      <div class="acts"><button class="btn ghost" data-act="modal-close">취소</button><button class="btn ghost" data-act="to-trash">삭제 예정으로</button><button class="btn danger" data-act="remove-ok">관리실에서 빼기</button></div>`);
+  }
+  else if(act==='to-trash'){ upd(openId, a => a.status='trash'); closeModal(); render(); }
+  else if(act==='remove-ok'){ apps = apps.filter(x=>x.id!==openId); save('apps'); closeModal(); closeApp(); render(); }
+  else if(act==='modal-close'){ closeModal(); }
+  else if(act==='ver'){ verPanel('log'); }
+  else if(act==='vtab'){ verPanel(el.dataset.t); }
+  else if(act==='rchk' || act==='mx'){
+    const aid = act==='rchk' ? openId : el.dataset.a; const rid = el.dataset.r;
+    upd(aid, a => { a.rules = a.rules||{}; a.rules[rid] = el.checked; });
+    setTimeout(render, 0);
+  }
+  else if(act==='rule-new'){ ruleEditor(null); }
+  else if(act==='rule-edit'){ ruleEditor(rules.find(r=>r.id===id)); }
+  else if(act==='rule-save'){
+    const name = $('#rN').value.trim(); if(!name){ toast('이름을 적어 주세요'); return; }
+    const data = {id, name, desc:$('#rD').value.trim(), scope:$('#rS').value};
+    if(el.dataset.new==='1') rules.push(data); else rules = rules.map(r => r.id===id ? data : r);
+    save('rules'); closeModal(); render();
+  }
+  else if(act==='rule-del'){ rules = rules.filter(r=>r.id!==id); save('rules'); closeModal(); render(); }
+  else if(act==='rule-req'){
+    const r = rules.find(x=>x.id===id);
+    const miss = apps.filter(a => a.status!=='trash' && ruleFits(r,a) && !(a.rules&&a.rules[r.id]));
+    copyOut(`아래 앱들에 공통 규칙 「${r.name}」을 적용해줘.\n규칙 내용: ${r.desc}\n\n${miss.map(a=>{const m=mainLink(a);return `- ${a.name}${m?' — '+m.url:''}`;}).join('\n')}\n\n적용한 앱은 앱 관리실에서도 체크해줘.`, '규칙 적용 요청');
+  }
+  else if(act==='del-req'){
+    const lines = [];
+    apps.filter(a=>a.status==='trash').forEach(a => (a.links||[]).forEach(l => lines.push(`- ${l.title} — ${l.url} (앱: ${a.name}, 삭제 예정)`)));
+    apps.filter(a=>a.status!=='trash').forEach(a => (a.links||[]).filter(l=>l.del).forEach(l => lines.push(`- ${l.title} — ${l.url} (앱: ${a.name})`)));
+    copyOut(`앱 관리실 정리함에 있는 아래 아티팩트들을 삭제해줘.\n\n${lines.join('\n')}\n\n삭제가 끝나면 앱 관리실에서도 해당 항목을 정리해줘.`, '삭제 요청');
+  }
+  else if(act==='refresh'){ refreshAll(); }
+  else if(act==='undo'){ undoLog(+el.dataset.i); }
+  else if(act==='inbox-clear'){ seen.log = []; save('seen'); renderInbox(); }
+  else if(act==='visit-req'){
+    copyOut(`앱 관리실의 Netlify 방문자 수를 최신으로 업데이트해줘. Netlify 프로젝트 목록도 다시 확인해서 새 배포 주소가 있으면 채워줘.`, '방문자 새로고침 요청');
+  }
+  else if(act==='sync-req'){
+    copyOut(`앱 관리실을 내 아티팩트 전체 목록과 동기화해줘. 새로 생긴 아티팩트는 알맞은 앱에 묶거나 새 앱으로 추가하고, 마지막 작업일도 최신으로 맞춰줘.`, '동기화 요청');
+  }
+});
+document.addEventListener('input', e => {
+  if(e.target.id==='q'){ filt.q = e.target.value; const pos = e.target.selectionStart; renderView(); const q = $('#q'); q.focus(); try{q.setSelectionRange(pos,pos);}catch(_){}; return; }
+  if(e.target.id==='chkIn'){ renderChecker(); return; }
+  const f = e.target.dataset.f; if(!f || !openId) return;
+  upd(openId, a => { a[f] = f==='tags' ? e.target.value.split(',').map(s=>s.trim()).filter(Boolean) : e.target.value; });
+  clearTimeout(window._rv); window._rv = setTimeout(() => { renderStats(); renderTabs(); renderView(); }, 300);
+});
+document.addEventListener('change', e => {
+  const f = e.target.dataset.f; if(!f || !openId) return;
+  if(f==='parent'){ upd(openId, a => a.parent = e.target.value); render(); toast(e.target.value ? '「'+parentOf(apps.find(x=>x.id===openId)).name+'」 아래로 묶었어요' : '독립 앱으로 뺐어요'); return; }
+  if(f==='cat' || f==='updated'){ upd(openId, a => a[f] = e.target.value); render(); }
+  if(f==='github' || f==='netlify'){ upd(openId, a => { a[f] = e.target.value.trim(); if(f==='github' && a[f]){ a.rules = a.rules||{}; if(rules.some(r=>r.id==='r5')) a.rules.r5 = true; } }); render(); }
+});
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape'){ if($('#modal').classList.contains('on')) closeModal(); else closeApp(); }
+  if(e.key==='Enter' && e.target.id==='chkIn'){ const s = similar(e.target.value); if(s.length) openApp(s[0].a.id); }
+});
+$('#modal').addEventListener('click', e => { if(e.target.id==='modal') closeModal(); });
+
+/* drag between columns */
+function bindDnD(){
+  document.querySelectorAll('.card[draggable]').forEach(c => {
+    c.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', c.dataset.id); c.classList.add('dragging'); });
+    c.addEventListener('dragend', () => c.classList.remove('dragging'));
+  });
+  document.querySelectorAll('.col').forEach(col => {
+    col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('over'); });
+    col.addEventListener('dragleave', () => col.classList.remove('over'));
+    col.addEventListener('drop', e => { e.preventDefault(); col.classList.remove('over'); const id = e.dataTransfer.getData('text/plain'); upd(id, a => a.status = col.dataset.col); render(); toast('상태를 「'+ST[col.dataset.col].l+'」로 바꿨어요'); });
+  });
+}
+
+$('#verBtn').textContent = VERSION;
+init();
+</script>
+</body>
+</html>
