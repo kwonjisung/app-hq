@@ -103,6 +103,20 @@ header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
 .visbox div{background:#eef8f7;border-radius:10px;padding:8px 10px}
 .visbox b{display:block;font-size:18px}
 .visbox span{font-size:11px;color:var(--sub)}
+.nob{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;background:var(--ink);color:#fff;border-radius:6px;padding:1px 6px;margin-right:6px;vertical-align:1px;letter-spacing:0}
+.nob.big{font-size:15px;padding:4px 9px;margin:4px 0 0;border-radius:8px}
+.nobox{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#faf7f0;border:1px dashed var(--line);border-radius:10px;padding:8px 10px}
+.chk{display:flex;gap:5px;flex-wrap:wrap}
+.chk span{font-size:11px;padding:2px 7px;border-radius:6px;background:var(--soft);color:#9a958b}
+.chk span.ok{background:#e3f4ec;color:var(--active);font-weight:600}
+.numhead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:12px;flex-wrap:wrap}
+.numhead h3{margin:0;font-size:17px}.numhead h3 span{font-size:13px;color:var(--sub);margin-left:6px}
+.numhead p{margin:4px 0 0;color:var(--sub);font-size:13px;max-width:620px}
+.nextno{background:var(--ink);color:#fff;border-radius:14px;padding:10px 16px;font-size:12px;text-align:center}
+.nextno b{display:block;font-size:24px;line-height:1.2}
+.cands{display:flex;flex-direction:column;gap:6px}
+.cand{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 11px;flex-wrap:wrap}
+.cand .cn{cursor:pointer;min-width:200px}.cand .btn{margin-left:auto}
 .newb{display:inline-block;font-size:9.5px;font-weight:700;background:var(--trash);color:#fff;border-radius:5px;padding:1px 5px;margin-right:5px;vertical-align:2px;letter-spacing:.03em}
 .inbox{background:#eef6ff;border:1px solid #c7dcf3;border-radius:var(--r);padding:12px 14px;margin-bottom:14px}
 .inbox h3{margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:8px}
@@ -300,7 +314,7 @@ const SLEEP_DAYS = 14;
 
 let apps = [], rules = [];
 let db = null, readOnly = false, loaded = {apps:false, rules:false};
-let view = ['board','list','rules','clean'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'board';
+let view = ['board','list','nums','rules','clean'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'board';
 let filt = {cat:'전체', q:'', st:null};
 let sortBy = {k:'updated', dir:-1};
 let openId = null;
@@ -319,6 +333,20 @@ const lastUpd = a => [a.updated||'', ...kidsOf(a).map(k=>k.updated||'')].sort().
 const isSleeping = a => a.status==='active' && days(lastUpd(a)) >= SLEEP_DAYS;
 const mainLink = a => (a.links||[]).find(l => l.kind==='main') || (a.links||[])[0];
 const ruleFits = (r, a) => r.scope==='all' || (r.scope==='game' ? a.cat==='게임' : true);
+const MAX_NO = 999;
+const regOf = a => meta.registry.find(r => r.appId===a.id);
+const noOf = a => { const r = regOf(a); return r ? r.no : 0; };
+const fmtNo = n => '#'+String(n).padStart(3,'0');
+const nextNo = () => meta.registry.reduce((m,r)=>Math.max(m,r.no),0) + 1;
+function readiness(a){
+  const m = mainLink(a);
+  return [
+    {k:'run', l:'실행되는 본 앱', ok: !!(m && m.kind==='main')},
+    {k:'gh', l:'GitHub 저장소', ok: !!a.github},
+    {k:'nf', l:'Netlify 배포', ok: !!a.netlify},
+    {k:'recent', l:'최근 30일 작업', ok: days(lastUpd(a)) <= 30},
+  ];
+}
 const fullUrl = u => { u = String(u||'').trim(); if(!u) return ''; return /^https?:\/\//.test(u) ? u : 'https://'+u; };
 const shortUrl = u => String(u||'').replace(/^https?:\/\//,'').replace(/^github\.com\//,'').replace(/\/$/,'');
 const netlifyName = u => { const m = String(u||'').match(/([a-z0-9-]+)\.netlify\.app/i); return m ? m[1] : ''; };
@@ -326,9 +354,9 @@ const ICON_GH = '<svg width="13" height="13" viewBox="0 0 16 16" fill="currentCo
 const ICON_WEB = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M1.5 8h13M8 1.5c2 2 2.8 4.2 2.8 6.5S10 12.5 8 14.5C6 12.5 5.2 10.3 5.2 8S6 3.5 8 1.5z"/></svg>';
 
 /* ---------- persistence ---------- */
-const dirty = {apps:false, rules:false, seen:false}, writing = {apps:false, rules:false, seen:false}, again = {apps:false, rules:false, seen:false}, timers = {};
-let seen = {keys:[], ignored:[], log:[]}, scan = null;
-const payloadOf = which => which==='seen' ? JSON.parse(JSON.stringify(seen)) : {items: JSON.parse(JSON.stringify(which==='apps'?apps:rules)), savedAt: new Date().toISOString()};
+const dirty = {apps:false, rules:false, seen:false, meta:false}, writing = {apps:false, rules:false, seen:false, meta:false}, again = {apps:false, rules:false, seen:false, meta:false}, timers = {};
+let seen = {keys:[], ignored:[], log:[]}, scan = null, meta = {registry:[]};
+const payloadOf = which => which==='seen' ? JSON.parse(JSON.stringify(seen)) : which==='meta' ? JSON.parse(JSON.stringify(meta)) : {items: JSON.parse(JSON.stringify(which==='apps'?apps:rules)), savedAt: new Date().toISOString()};
 function setSync(t){ $('#sync').textContent = t; }
 function save(which){
   dirty[which] = true;
@@ -336,7 +364,7 @@ function save(which){
   timers[which] = setTimeout(() => flush(which), 500);
 }
 async function flush(which){
-  const data = which==='apps' ? apps : which==='rules' ? rules : seen;
+  const data = which==='apps' ? apps : which==='rules' ? rules : which==='meta' ? meta : seen;
   if(!db){ try{ localStorage.setItem('appmgr_'+which, JSON.stringify(data)); }catch(e){} dirty[which]=false; setSync('이 브라우저에만 저장됨'); return; }
   if(readOnly){ dirty[which]=false; return; }
   if(writing[which]){ again[which] = true; return; }
@@ -369,6 +397,7 @@ async function init(){
     if(dirty[which] || writing[which]) return;
     const d = snap.exists ? snap.data() : null;
     if(which==='scan'){ scan = d ? JSON.parse(JSON.stringify(d)) : null; loaded.scan = true; renderScanInfo(); maybeIngest(); return; }
+    if(which==='meta'){ const x = d ? JSON.parse(JSON.stringify(d)) : {}; meta = {registry: Array.isArray(x.registry) ? x.registry : []}; loaded.meta = true; render(); return; }
     if(which==='seen'){ const x = d ? JSON.parse(JSON.stringify(d)) : {}; seen = {keys:x.keys||[], ignored:x.ignored||[], log:x.log||[], lastScan:x.lastScan||''}; loaded.seen = true; renderInbox(); maybeIngest(); return; }
     const items = d && Array.isArray(d.items) ? JSON.parse(JSON.stringify(d.items)) : [];
     if(which==='apps') apps = items; else rules = items;
@@ -376,7 +405,7 @@ async function init(){
     if(!snap.metadata.fromCache){ clearTimeout(timer); setSync('최신 상태'); if(which==='apps') loaded.appsFresh = true; }
     render(); maybeIngest();
   }, err => { clearTimeout(timer); loaded[which] = true; setSync('불러오기 실패'); render(); });
-  sub('apps'); sub('rules'); sub('scan'); sub('seen');
+  sub('apps'); sub('rules'); sub('scan'); sub('seen'); sub('meta');
 }
 
 
@@ -616,18 +645,19 @@ function renderStats(){
   const links = apps.reduce((n,a) => n + (a.links||[]).length, 0);
   const gh = apps.filter(a=>a.github).length, nf = apps.filter(a=>a.netlify).length, vs = apps.reduce((n,a)=>n+(a.visits?a.visits.ips:0),0);
   $('#stats').innerHTML =
-    `<div class="stat" data-act="stat" data-st=""><b>${c.all}</b><span>전체 앱${c.sub?` (+하위 ${c.sub})`:''} · 아티팩트 ${links} · GitHub ${gh} · 배포 ${nf} · 7일 방문 기기 ${vs}</span></div>` +
+    `<div class="stat" data-act="stat" data-st=""><b>${c.all}</b><span>전체 앱${c.sub?` (+하위 ${c.sub})`:''} · 아티팩트 ${links} · 번호 ${meta.registry.length} · GitHub ${gh} · 배포 ${nf} · 7일 방문 기기 ${vs}</span></div>` +
     ORDER.map(s => `<div class="stat" data-act="stat" data-st="${s}"><b>${c[s]}</b><span><i style="background:${ST[s].c}"></i>${ST[s].l}</span></div>`).join('') +
     `<div class="stat ${c.sleep?'warn':''}" data-act="stat" data-st="sleep"><b>${c.sleep}</b><span>💤 잠든 앱 (${SLEEP_DAYS}일+)</span></div>`;
 }
 function renderTabs(){
   const cleanN = apps.filter(a=>a.status==='trash').length + apps.reduce((n,a)=>n+(a.links||[]).filter(l=>l.del).length,0);
-  const T = [['board','보드'],['list','전체 목록'],['rules','공통 규칙',rules.length],['clean','정리함',cleanN]];
+  const T = [['board','보드'],['list','전체 목록'],['nums','관리번호',meta.registry.length],['rules','공통 규칙',rules.length],['clean','정리함',cleanN]];
   $('#tabs').innerHTML = T.map(([k,l,n]) => `<button class="tab ${view===k?'on':''}" data-act="tab" data-v="${k}">${l}${n!==undefined?`<span class="n">${n}</span>`:''}</button>`).join('');
 }
 function filtered(){
   const q = filt.q.trim().toLowerCase();
-  const hit = a => [a.name,a.desc,(a.tags||[]).join(' '),a.next,a.github,a.netlify].join(' ').toLowerCase().includes(q);
+  const qn = q.replace(/^#/,''); const numQ = /^\d{1,3}$/.test(qn) ? +qn : 0;
+  const hit = a => (numQ && noOf(a)===numQ) || [a.name,a.desc,(a.tags||[]).join(' '),a.next,a.github,a.netlify].join(' ').toLowerCase().includes(q);
   return tops().filter(a => {
     if(filt.cat!=='전체' && a.cat!==filt.cat) return false;
     if(filt.st==='sleep' && !isSleeping(a)) return false;
@@ -640,7 +670,7 @@ function filterBar(){
   return `<div class="filters">
     ${['전체',...CATS].map(c => `<button class="chip ${filt.cat===c?'on':''}" data-act="cat" data-c="${c}">${c}</button>`).join('')}
     ${filt.st ? `<button class="chip on" data-act="clear-st">${filt.st==='sleep'?'💤 잠든 앱':ST[filt.st].l} ✕</button>` : ''}
-    <input id="q" placeholder="이름·태그·메모 검색" value="${esc(filt.q)}">
+    <input id="q" placeholder="이름·번호(001)·태그 검색" value="${esc(filt.q)}">
   </div>`;
 }
 function renderView(){
@@ -650,6 +680,7 @@ function renderView(){
   if(view==='list') v.innerHTML = filterBar() + list();
   if(view==='rules') v.innerHTML = rulesView();
   if(view==='clean') v.innerHTML = cleanView();
+  if(view==='nums') v.innerHTML = numsView();
   bindDnD();
 }
 function sleepStrip(){
@@ -662,7 +693,7 @@ function cardHTML(a){
   const old = isSleeping(a);
   const fit = rules.filter(r => ruleFits(r,a));
   return `<div class="card" draggable="true" data-act="open" data-id="${a.id}">
-    <div class="t">${a.isNew?'<span class="newb">NEW</span>':''}${esc(a.name)}</div>
+    <div class="t">${noOf(a)?`<span class="nob">${fmtNo(noOf(a))}</span>`:''}${a.isNew?'<span class="newb">NEW</span>':''}${esc(a.name)}</div>
     <div class="meta">
       <span class="cat">${esc(a.cat)}</span>
       <span class="age ${old?'old':''}">${old?'💤 ':''}${ageTxt(lastUpd(a))}</span>
@@ -685,6 +716,7 @@ function board(){
   }).join('')}</div>`;
 }
 function rowHTML(a, sub){ const m = mainLink(a); return `<tr class="r${sub?' sub':''}" data-act="open" data-id="${a.id}">
+      <td class="mono" style="white-space:nowrap">${noOf(a)?`<span class="nob">${fmtNo(noOf(a))}</span>`:'<span style="color:#ccc">—</span>'}</td>
       <td>${sub?'<span class="subm">└</span>':''}<b>${esc(a.name)}</b>${!sub&&kidsOf(a).length?`<span class="kidn">하위 ${kidsOf(a).length}</span>`:''}${(a.tags||[]).length?`<div style="font-size:11px;color:var(--sub)">${a.tags.map(esc).join(' · ')}</div>`:''}</td>
       <td><span class="st"><i style="background:${ST[a.status].c}"></i>${ST[a.status].l}</span></td>
       <td><span class="cat">${esc(a.cat)}</span></td>
@@ -702,6 +734,7 @@ function list(){
   L.sort((a,b) => {
     let x = a[k]||'', y = b[k]||'';
     if(k==='status'){ x = ORDER.indexOf(a.status); y = ORDER.indexOf(b.status); }
+    if(k==='no'){ x = noOf(a)||10000; y = noOf(b)||10000; }
     if(k==='links'){ x = (a.links||[]).length; y = (b.links||[]).length; }
     if(k==='updated'){ x = lastUpd(a); y = lastUpd(b); }
     if(k==='visits'){ x = a.visits?a.visits.ips:-1; y = b.visits?b.visits.ips:-1; }
@@ -709,7 +742,7 @@ function list(){
   });
   const th = (key,l) => `<th data-act="sort" data-k="${key}">${l}${sortBy.k===key?(sortBy.dir>0?' ↑':' ↓'):''}</th>`;
   if(!L.length) return `<div class="empty">조건에 맞는 앱이 없어요.</div>`;
-  return `<div class="tblwrap"><table><thead><tr>${th('name','앱')}${th('status','상태')}${th('cat','분류')}${th('updated','마지막 작업')}${th('links','아티팩트')}${th('github','GitHub')}${th('netlify','배포 사이트')}${th('visits','방문 (7일)')}<th>다음 할 일</th><th></th></tr></thead><tbody>
+  return `<div class="tblwrap"><table><thead><tr>${th('no','번호')}${th('name','앱')}${th('status','상태')}${th('cat','분류')}${th('updated','마지막 작업')}${th('links','아티팩트')}${th('github','GitHub')}${th('netlify','배포 사이트')}${th('visits','방문 (7일)')}<th>다음 할 일</th><th></th></tr></thead><tbody>
     ${L.map(a => rowHTML(a,false) + kidsOf(a).map(k=>rowHTML(k,true)).join('')).join('')}</tbody></table></div>`;
 }
 function rulesView(){
@@ -776,6 +809,52 @@ function renderChecker(){
     : `<div class="simnote">✓ 비슷한 앱이 없어요. 새로 만들어도 좋아요.</div>`;
 }
 
+
+function numsView(){
+  const reg = meta.registry.slice().sort((x,y)=>x.no-y.no);
+  const last = reg.length ? reg[reg.length-1] : null;
+  const rows = reg.map(r => { const a = apps.find(x=>x.id===r.appId);
+    return `<tr class="r" ${a?`data-act="open" data-id="${a.id}"`:''}><td class="mono"><span class="nob">${fmtNo(r.no)}</span></td>
+      <td><b>${esc(a ? a.name : r.name)}</b>${a ? '' : ' <span class="kidn">관리실에서 빠짐</span>'}</td>
+      <td>${a?`<span class="st"><i style="background:${ST[a.status].c}"></i>${ST[a.status].l}</span>`:'—'}</td>
+      <td>${a?`<span class="cat">${esc(a.cat)}</span>`:''}</td>
+      <td>${a&&a.github?`<a class="ext" href="${esc(fullUrl(a.github))}" target="_blank" rel="noopener" data-stop="1">${ICON_GH}</a>`:''} ${a&&a.netlify?`<a class="ext web" href="${esc(fullUrl(a.netlify))}" target="_blank" rel="noopener" data-stop="1">${ICON_WEB}</a>`:''}</td>
+      <td class="mono" style="color:var(--sub)">${esc(r.at||'')}</td>
+      <td>${last && r.no===last.no && !readOnly ? `<button class="btn ghost sm" data-act="unassign" data-no="${r.no}" data-stop="1">취소</button>` : ''}</td></tr>`; }).join('');
+  const cands = tops().filter(a => !noOf(a) && a.status!=='trash' && a.id!=='nfunknown')
+    .map(a => ({a, r: readiness(a)})).map(x => Object.assign(x, {score: x.r.filter(c=>c.ok).length}))
+    .sort((x,y) => y.score-x.score || lastUpd(y.a).localeCompare(lastUpd(x.a)));
+  const n = nextNo();
+  return `<div class="numhead"><div><h3>관리번호 대장 <span class="mono">${reg.length} / ${MAX_NO}</span></h3>
+      <p>검증된 앱부터 순서대로 ${fmtNo(1)}~${fmtNo(MAX_NO)}를 채워요. 한 번 붙인 번호는 바뀌지 않고, 앱을 지워도 다른 앱에 다시 쓰지 않아요.</p></div>
+      <div class="nextno">다음 번호<b class="mono">${n<=MAX_NO?fmtNo(n):'가득 참'}</b></div></div>
+    ${reg.length ? `<div class="tblwrap"><table><thead><tr><th>번호</th><th>앱</th><th>상태</th><th>분류</th><th>연결</th><th>부여일</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="empty">아직 번호가 없어요.</div>'}
+    <h3 style="font-size:15px;margin:20px 0 4px">번호 받을 후보</h3>
+    <p style="margin:0 0 10px;color:var(--sub);font-size:13px">자동으로 매기지 않아요. 검증이 끝난 앱만 직접 ${fmtNo(n)}을 붙여 주세요. 체크는 참고용 기준이에요.</p>
+    <div class="cands">${cands.map(({a,r}) => `<div class="cand"><div class="cn" data-act="open" data-id="${a.id}"><b>${esc(a.name)}</b> <span class="cat">${esc(a.cat)}</span></div>
+      <div class="chk">${r.map(c=>`<span class="${c.ok?'ok':''}" title="${c.l}">${c.ok?'✓':'·'} ${c.l}</span>`).join('')}</div>
+      <button class="btn ghost sm" data-act="assign" data-id="${a.id}" ${n>MAX_NO||readOnly?'disabled':''}>${fmtNo(n)} 부여</button></div>`).join('')}</div>`;
+}
+function askAssign(id){
+  const a = apps.find(x=>x.id===id); if(!a || noOf(a)) return;
+  const n = nextNo(); if(n > MAX_NO){ toast('999번까지 모두 찼어요'); return; }
+  modal(`<h3>「${esc(a.name)}」에 <span class="mono">${fmtNo(n)}</span>을 붙일까요?</h3>
+    <p>검증이 끝난 앱에만 붙여 주세요. 한 번 붙인 번호는 바뀌지 않고, 나중에 앱을 지워도 이 번호는 다시 쓰지 않아요.</p>
+    <div class="chk" style="margin-bottom:6px">${readiness(a).map(c=>`<span class="${c.ok?'ok':''}">${c.ok?'✓':'·'} ${c.l}</span>`).join('')}</div>
+    <div class="acts"><button class="btn ghost" data-act="modal-close">취소</button><button class="btn" data-act="assign-ok" data-id="${a.id}">${fmtNo(n)} 부여</button></div>`);
+}
+function doAssign(id){
+  const a = apps.find(x=>x.id===id); if(!a || noOf(a)) return;
+  const n = nextNo(); if(n > MAX_NO) return;
+  meta.registry.push({no:n, appId:a.id, name:a.name, at:todayStr()});
+  save('meta'); closeModal(); render(); toast('「'+a.name+'」 → '+fmtNo(n));
+}
+function undoAssign(no){
+  const reg = meta.registry; const last = reg.reduce((m,r)=>Math.max(m,r.no),0);
+  if(+no !== last) return;
+  meta.registry = reg.filter(r => r.no !== last); save('meta'); render(); toast(fmtNo(last)+' 취소 — 다음 앱이 이 번호를 받아요');
+}
+
 /* ---------- drawer ---------- */
 function openApp(id){ const _a = apps.find(x=>x.id===id); if(_a && _a.isNew){ _a.isNew = false; save('apps'); setTimeout(()=>{ renderView(); }, 0); } openId = id; renderDrawer(); $('#drawer').classList.add('on'); $('#scrim').classList.add('on'); }
 function closeApp(){ openId = null; $('#drawer').classList.remove('on'); $('#scrim').classList.remove('on'); }
@@ -786,8 +865,9 @@ function renderDrawer(){
   const dup = dupesOf(a);
   const focused = document.activeElement && document.activeElement.closest('#drawer') ? document.activeElement.dataset.f : null;
   $('#drawer').innerHTML = `
-    <div class="dh"><input data-f="name" value="${esc(a.name)}" ${readOnly?'disabled':''}><button class="x" data-act="close">✕</button></div>
+    <div class="dh">${noOf(a)?`<span class="nob big">${fmtNo(noOf(a))}</span>`:''}<input data-f="name" value="${esc(a.name)}" ${readOnly?'disabled':''}><button class="x" data-act="close">✕</button></div>
     <div class="dbody">
+      ${noOf(a) ? '' : `<div class="fld"><label>관리번호</label><div class="nobox"><div class="chk">${readiness(a).map(c=>`<span class="${c.ok?'ok':''}">${c.ok?'✓':'·'} ${c.l}</span>`).join('')}</div><button class="btn sm" data-act="assign" data-id="${a.id}" ${nextNo()>MAX_NO||readOnly?'disabled':''}>검증 완료 → ${fmtNo(nextNo())} 부여</button></div></div>`}
       <div class="fld"><label>상태</label><div class="seg">${ORDER.map(s => `<button class="${a.status===s?'on':''}" style="${a.status===s?`background:${ST[s].c};border-color:${ST[s].c}`:''}" data-act="set-st" data-st="${s}"><i style="background:${a.status===s?'#fff':ST[s].c}"></i>${ST[s].l}</button>`).join('')}</div></div>
       <div class="two">
         <div class="fld"><label>분류</label><select data-f="cat">${CATS.map(c=>`<option ${a.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
@@ -826,8 +906,9 @@ function renderDrawer(){
 
 
 /* ---------- version ---------- */
-const VERSION = 'v1.5';
+const VERSION = 'v1.6';
 const CHANGELOG = [
+  {v:'v1.6', d:'2026-11-25', t:'관리번호', items:['검증된 앱부터 #001~#999 일련번호를 붙이는 관리번호','\'관리번호\' 탭: 번호 대장, 다음 번호, 번호 받을 후보(실행 앱·GitHub·Netlify·최근 작업 체크는 참고용)','자동으로 매기지 않음 — 직접 \'부여\'를 눌러야 붙고, 한 번 붙인 번호는 바뀌거나 다시 쓰이지 않음','카드·목록·상세에 번호 표시, 검색창에 001이나 #1로 찾기','#001 스터디룸 · #002 Adagio · #003 미니 RC 그랑프리']},
   {v:'v1.5', d:'2026-11-16', t:'새 앱 자동 발견', items:['Claude가 아티팩트·GitHub·Netlify를 훑어 발견 목록을 남기면(채팅에서 "앱 관리실 스캔해줘"), 페이지가 열릴 때 알아서 배치','이름이나 설명이 기존 앱과 맞으면 그 앱에 붙이고, 아니면 NEW 표시와 함께 새 앱으로 추가','아티팩트·GitHub가 갱신되면 마지막 작업일도 자동으로 맞춤','🔄 새로고침: Netlify에서 새 사이트와 7일 방문 수를 바로 가져옴','\'새로 들어온 것\' 목록에서 잘못 배치된 건 되돌리기 — 다음 스캔에서도 다시 안 넣음']},
   {v:'v1.4', d:'2026-11-15', t:'버전 표시와 작동 원리', items:['제목 옆 버전 번호 — 누르면 업데이트 기록·작동 원리·내부 흐름을 보여줘요','업데이트할 때마다 버전을 올리고 이 기록에 남겨요']},
   {v:'v1.3', d:'2026-11-15', t:'하위 앱 묶기', items:['앱을 다른 앱 아래로 묶는 \'상위 앱\' 기능','English Daily·Japanese Daily를 스터디룸 아래로 정리','상위 앱의 마지막 작업일은 하위 앱까지 포함해서 계산']},
@@ -904,7 +985,7 @@ function verPanel(tab){
     body = `<div class="vsec"><p>앱 관리실은 <b>보고 정리하는 화면</b>이고, 실제 일(아티팩트 삭제·규칙 적용·Netlify 조회)은 <b>Claude</b>가 해요. 둘은 같은 저장소를 같이 봐요.</p>
       ${diagramSystem()}
       <div class="vgrid">
-        <div class="vcard"><b>📦 저장소</b>앱 목록은 <code>manager/apps</code>, 공통 규칙은 <code>manager/rules</code> 문서 두 개에 저장돼요. 어느 기기에서 열어도 같고, 수정은 나만 할 수 있어요.</div>
+        <div class="vcard"><b>📦 저장소</b>앱 목록은 <code>manager/apps</code>, 공통 규칙은 <code>manager/rules</code>, 관리번호 대장은 <code>manager/meta</code>에 저장돼요. 어느 기기에서 열어도 같고, 수정은 나만 할 수 있어요.</div>
         <div class="vcard"><b>📋 요청문 복사</b>이 페이지는 다른 아티팩트를 직접 못 고쳐요. 그래서 할 일을 요청문으로 만들어 주고, 채팅에 붙여넣으면 Claude가 처리해요.</div>
         <div class="vcard"><b>🌐 Netlify·GitHub</b>Claude가 Netlify 연결로 배포 주소와 최근 7일 방문 기록을, GitHub에서 저장소 목록을 가져와 저장소에 적어요.</div>
         <div class="vcard"><b>🔎 자동 발견</b>페이지는 다른 아티팩트 목록을 직접 읽을 수 없어요. 그래서 채팅에서 요청하면 Claude가 훑어 <code>manager/scan</code>에 남기고, 페이지는 열릴 때 처음 보는 것만 골라 배치해요. 이미 본 것·되돌린 것은 <code>manager/seen</code>에 기억해요. Netlify는 새로고침 버튼으로 페이지가 직접 물어봐요.</div>
@@ -1017,6 +1098,9 @@ document.addEventListener('click', e => {
     copyOut(`앱 관리실 정리함에 있는 아래 아티팩트들을 삭제해줘.\n\n${lines.join('\n')}\n\n삭제가 끝나면 앱 관리실에서도 해당 항목을 정리해줘.`, '삭제 요청');
   }
   else if(act==='refresh'){ refreshAll(); }
+  else if(act==='assign'){ askAssign(id); }
+  else if(act==='assign-ok'){ doAssign(id); }
+  else if(act==='unassign'){ undoAssign(el.dataset.no); }
   else if(act==='undo'){ undoLog(+el.dataset.i); }
   else if(act==='inbox-clear'){ seen.log = []; save('seen'); renderInbox(); }
   else if(act==='visit-req'){
